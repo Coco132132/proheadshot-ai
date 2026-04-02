@@ -1,82 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Style → prompt mapping
+const STYLE_PROMPTS: Record<string, string> = {
+  professional: 'professional headshot photo, light neutral gray background, business casual attire, soft natural studio lighting, sharp focus, LinkedIn profile photo quality, photorealistic',
+  clean: 'professional headshot photo, pure white background, formal business attire, clean crisp look, resume photo quality, sharp focus, photorealistic',
+  corporate: 'corporate executive headshot, dark gradient background, professional suit, polished look, company profile photo, dramatic studio lighting, photorealistic',
+}
+
 // POST /api/generate
-// Accepts: multipart/form-data with `photo` and `style`
-// Returns: { jobId }
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const photo = formData.get('photo') as File | null
-    const style = formData.get('style') as string
+    const style = formData.get('style') as string || 'professional'
 
     if (!photo) {
       return NextResponse.json({ error: 'No photo provided' }, { status: 400 })
     }
 
-    const ASTRIA_API_KEY = process.env.ASTRIA_API_KEY
-    if (!ASTRIA_API_KEY) {
+    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN
+    if (!REPLICATE_API_TOKEN) {
       return NextResponse.json({ error: 'API not configured' }, { status: 500 })
     }
 
-    // Style → Astria prompt mapping
-    const stylePrompts: Record<string, string> = {
-      professional: 'professional headshot, light neutral background, business attire, soft natural lighting, LinkedIn profile photo, high quality portrait',
-      clean: 'professional headshot, white background, formal attire, clean sharp look, resume photo, studio quality',
-      corporate: 'corporate headshot, dark gradient background, executive look, polished professional, company bio photo, high quality',
-    }
+    // Convert file to base64 data URI
+    const bytes = await photo.arrayBuffer()
+    const base64 = Buffer.from(bytes).toString('base64')
+    const dataUri = `data:${photo.type};base64,${base64}`
 
-    const prompt = stylePrompts[style] || stylePrompts.professional
+    const prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.professional
 
-    // Step 1: Upload photo to Astria to create a tune (fine-tune)
-    const astriaFormData = new FormData()
-    astriaFormData.append('tune[title]', `headshot-${Date.now()}`)
-    astriaFormData.append('tune[name]', 'person')
-    astriaFormData.append('tune[base_tune_id]', '690204') // Astria's base portrait model
-    astriaFormData.append('tune[image_urls][]', `data:${photo.type};base64,${Buffer.from(await photo.arrayBuffer()).toString('base64')}`)
-
-    const tuneRes = await fetch('https://api.astria.ai/tunes', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${ASTRIA_API_KEY}` },
-      body: astriaFormData,
-    })
-
-    if (!tuneRes.ok) {
-      const err = await tuneRes.text()
-      console.error('Astria tune error:', err)
-      return NextResponse.json({ error: 'Generation failed. Please try again.' }, { status: 500 })
-    }
-
-    const tune = await tuneRes.json()
-    const tuneId = tune.id
-
-    // Step 2: Create a prompt (generate images)
-    const promptRes = await fetch(`https://api.astria.ai/tunes/${tuneId}/prompts`, {
+    // Call Replicate — photomaker model
+    const response = await fetch('https://api.replicate.com/v1/models/tencentarc/photomaker/predictions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${ASTRIA_API_KEY}`,
+        Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
+        Prefer: 'wait=60', // wait up to 60s for result
       },
       body: JSON.stringify({
-        prompt: {
-          text: prompt,
-          num_images: 4,
-          w: 1024,
-          h: 1024,
+        input: {
+          prompt: `img ${prompt}`,
+          input_image: dataUri,
+          num_outputs: 4,
+          num_inference_steps: 30,
+          style_strength_ratio: 35,
+          guidance_scale: 7.5,
         },
       }),
     })
 
-    if (!promptRes.ok) {
+    if (!response.ok) {
+      const err = await response.text()
+      console.error('Replicate error:', err)
       return NextResponse.json({ error: 'Generation failed. Please try again.' }, { status: 500 })
     }
 
-    const promptData = await promptRes.json()
-    const jobId = `${tuneId}_${promptData.id}`
+    const prediction = await response.json()
 
-    // Store job info in Cloudflare KV (or env-based simple store for now)
-    // In production: use KV.put(jobId, JSON.stringify({ tuneId, promptId, style, status: 'pending' }))
+    // If still processing, return jobId for polling
+    if (prediction.status === 'starting' || prediction.status === 'processing') {
+      return NextResponse.json({ jobId: prediction.id, status: 'pending' })
+    }
 
-    return NextResponse.json({ jobId })
+    // If completed immediately (Prefer: wait)
+    if (prediction.status === 'succeeded' && prediction.output) {
+      return NextResponse.json({
+        jobId: prediction.id,
+        status: 'complete',
+        images: prediction.output.slice(0, 4),
+      })
+    }
+
+    return NextResponse.json({ jobId: prediction.id, status: 'pending' })
   } catch (err) {
     console.error('Generate error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
