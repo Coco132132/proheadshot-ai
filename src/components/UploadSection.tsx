@@ -4,24 +4,9 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 const STYLES = [
-  {
-    id: 'professional',
-    label: 'Professional',
-    desc: 'Light neutral background. Best for LinkedIn.',
-    icon: '💼',
-  },
-  {
-    id: 'clean',
-    label: 'Clean',
-    desc: 'White background, formal look. Best for resumes.',
-    icon: '📄',
-  },
-  {
-    id: 'corporate',
-    label: 'Corporate',
-    desc: 'Dark/gradient background. Best for company bios.',
-    icon: '🏢',
-  },
+  { id: 'professional', label: 'Professional', desc: 'LinkedIn · Light background', icon: '💼' },
+  { id: 'clean', label: 'Clean', desc: 'Resume · White background', icon: '📄' },
+  { id: 'corporate', label: 'Corporate', desc: 'Company bio · Dark tone', icon: '🏢' },
 ]
 
 export default function UploadSection() {
@@ -49,6 +34,14 @@ export default function UploadSection() {
     setPreview(URL.createObjectURL(f))
   }, [])
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const f = e.dataTransfer.files?.[0]
+    if (!f) return
+    const fakeEvent = { target: { files: [f] } } as unknown as React.ChangeEvent<HTMLInputElement>
+    handleFileChange(fakeEvent)
+  }, [handleFileChange])
+
   const handleGenerate = async () => {
     if (!file) return
     setLoading(true)
@@ -61,22 +54,13 @@ export default function UploadSection() {
       formData.append('style', selectedStyle)
 
       setProgress(30)
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        body: formData,
-      })
-
+      const res = await fetch('/api/generate', { method: 'POST', body: formData })
       setProgress(70)
 
-      if (!res.ok) {
-        throw new Error('Generation failed. Please try again.')
-      }
-
+      if (!res.ok) throw new Error('Generation failed. Please try again.')
       const data = await res.json()
       setProgress(100)
 
-      // Store job ID and redirect to result page
       sessionStorage.setItem('jobId', data.jobId)
       router.push(`/result?jobId=${data.jobId}`)
     } catch (err: unknown) {
@@ -87,87 +71,92 @@ export default function UploadSection() {
   }
 
   return (
-    <div className="max-w-xl mx-auto">
-      {/* File upload area */}
-      <div className="mb-6">
+    <div className="max-w-lg mx-auto">
+      {/* Drop zone */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        className="mb-5"
+      >
         <label
           htmlFor="photo-upload"
-          className="block border-2 border-dashed border-slate-500 hover:border-blue-400 rounded-xl p-8 cursor-pointer transition-colors"
+          className="block border border-dashed border-[#C9A96E]/25 hover:border-[#C9A96E]/50 bg-white/[0.02] hover:bg-white/[0.04] rounded-2xl p-8 cursor-pointer transition-all duration-200"
         >
           {preview ? (
             <div className="text-center">
-              <img src={preview} alt="Preview" className="w-32 h-32 rounded-full object-cover mx-auto mb-3" />
-              <p className="text-slate-300 text-sm">{file?.name} · Click to change</p>
+              <img src={preview} alt="Preview" className="w-24 h-24 rounded-full object-cover mx-auto mb-3 ring-2 ring-[#C9A96E]/30" />
+              <p className="text-white/50 text-sm">{file?.name}</p>
+              <p className="text-[#C9A96E]/60 text-xs mt-1">Click to change photo</p>
             </div>
           ) : (
             <div className="text-center">
-              <div className="text-4xl mb-3">📷</div>
-              <p className="text-white font-semibold mb-1">Upload your photo</p>
-              <p className="text-slate-400 text-sm">JPG or PNG · Max 10MB · Your face clearly visible</p>
+              <div className="w-14 h-14 rounded-full bg-[#C9A96E]/10 border border-[#C9A96E]/20 flex items-center justify-center mx-auto mb-4 text-2xl">
+                📷
+              </div>
+              <p className="text-white/80 font-medium mb-1">Drop your photo here, or click to upload</p>
+              <p className="text-white/30 text-sm">JPG or PNG · Max 10MB · Face clearly visible</p>
             </div>
           )}
         </label>
-        <input
-          id="photo-upload"
-          type="file"
-          accept="image/jpeg,image/png"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+        <input id="photo-upload" type="file" accept="image/jpeg,image/png" onChange={handleFileChange} className="hidden" />
+        {error && <p className="text-red-400/80 text-sm mt-2 text-center">{error}</p>}
       </div>
 
-      {/* Style selection */}
+      {/* Style selector */}
       {file && (
-        <div className="mb-6">
-          <p className="text-white font-semibold mb-3 text-left">Choose your style</p>
-          <div className="grid grid-cols-3 gap-3">
+        <div className="mb-5">
+          <p className="text-white/40 text-xs uppercase tracking-widest mb-3 text-left">Choose style</p>
+          <div className="grid grid-cols-3 gap-2">
             {STYLES.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setSelectedStyle(s.id)}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                className={`p-3 rounded-xl border text-left transition-all duration-200 ${
                   selectedStyle === s.id
-                    ? 'border-blue-400 bg-blue-900/30'
-                    : 'border-slate-600 hover:border-slate-400'
+                    ? 'border-[#C9A96E]/60 bg-[#C9A96E]/10 shadow-[0_0_15px_rgba(201,169,110,0.15)]'
+                    : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
                 }`}
               >
-                <div className="text-2xl mb-1">{s.icon}</div>
-                <p className="text-white text-sm font-semibold">{s.label}</p>
-                <p className="text-slate-400 text-xs">{s.desc}</p>
+                <div className="text-xl mb-1">{s.icon}</div>
+                <p className={`text-sm font-medium ${selectedStyle === s.id ? 'text-[#E8D5A3]' : 'text-white/70'}`}>{s.label}</p>
+                <p className="text-xs text-white/30">{s.desc}</p>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Progress bar */}
+      {/* Progress */}
       {loading && (
         <div className="mb-4">
-          <div className="flex justify-between text-sm text-slate-400 mb-1">
+          <div className="flex justify-between text-xs text-white/30 mb-2">
             <span>Generating your headshots...</span>
             <span>{progress}%</span>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-white/5 rounded-full h-1.5">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+              className="progress-gold h-1.5 rounded-full transition-all duration-700"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Generate button */}
+      {/* CTA */}
       <button
-        onClick={handleGenerate}
-        disabled={!file || loading}
-        className="w-full py-4 rounded-xl font-bold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white"
+        onClick={file ? handleGenerate : undefined}
+        disabled={loading}
+        className={`w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
+          file
+            ? 'btn-gold'
+            : 'bg-white/5 text-white/30 border border-white/10 cursor-default'
+        }`}
       >
-        {loading ? 'Generating...' : file ? 'Generate My Headshots →' : 'Upload a Photo to Start'}
+        {loading ? 'Generating your headshots...' : file ? 'Generate My Headshots →' : 'Upload a photo to get started'}
       </button>
 
-      <p className="text-slate-500 text-xs mt-3 text-center">
-        Free preview · $9.99 to unlock HD download · No subscription
+      <p className="text-white/20 text-xs mt-3 text-center">
+        Free preview · $9.99 to unlock HD · No subscription · No account needed
       </p>
     </div>
   )

@@ -18,11 +18,7 @@ function ResultContent() {
   const [selected, setSelected] = useState(0)
 
   useEffect(() => {
-    if (!jobId) {
-      router.push('/')
-      return
-    }
-
+    if (!jobId) { router.push('/'); return }
     const fetchResult = async () => {
       try {
         const res = await fetch(`/api/result?jobId=${jobId}`)
@@ -35,7 +31,6 @@ function ResultContent() {
         setLoading(false)
       }
     }
-
     fetchResult()
   }, [jobId, router])
 
@@ -46,21 +41,16 @@ function ResultContent() {
       body: JSON.stringify({ jobId }),
     })
     const data = await res.json()
-    if (data.url) {
-      window.location.href = data.url
-    }
+    if (data.url) window.location.href = data.url
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-xl font-semibold mb-2">Generating your headshots...</p>
-          <p className="text-slate-400">This usually takes 20–60 seconds</p>
-          <div className="mt-6 w-48 h-2 bg-slate-700 rounded-full mx-auto overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full animate-pulse w-3/4" />
-          </div>
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full border-2 border-[#C9A96E]/20 border-t-[#C9A96E] animate-spin mx-auto mb-6" />
+          <p className="text-[#E8D5A3] text-xl font-semibold mb-2">Generating your headshots...</p>
+          <p className="text-white/30 text-sm">This usually takes 20–60 seconds</p>
         </div>
       </div>
     )
@@ -68,10 +58,10 @@ function ResultContent() {
 
   if (error || !result) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <p className="text-xl mb-4">{error || 'Something went wrong.'}</p>
-          <button onClick={() => router.push('/')} className="bg-blue-600 px-6 py-3 rounded-xl">
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white/60 text-xl mb-6">{error || 'Something went wrong.'}</p>
+          <button onClick={() => router.push('/')} className="btn-gold px-8 py-3 rounded-xl">
             Try Again
           </button>
         </div>
@@ -80,64 +70,80 @@ function ResultContent() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white">
-      <div className="max-w-3xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-center mb-2">Your AI Headshots Are Ready!</h1>
-        <p className="text-slate-400 text-center mb-8">Preview below · Unlock HD to download without watermark</p>
+    <main className="min-h-screen bg-[#0F0F0F] text-[#F5F0E8]">
+      {/* Ambient */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] rounded-full bg-[#C9A96E]/4 blur-[120px] pointer-events-none" />
 
-        {/* Image grid (watermarked) */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="relative max-w-3xl mx-auto px-4 py-14">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold mb-2">Your Headshots Are Ready</h1>
+          <p className="text-white/30 text-sm">Unlock HD to download without watermark</p>
+        </div>
+
+        {/* Image grid */}
+        <div className="grid grid-cols-2 gap-3 mb-8">
           {result.images.map((img, i) => (
             <div
               key={i}
               onClick={() => setSelected(i)}
-              className={`relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${
-                selected === i ? 'border-blue-400' : 'border-transparent'
+              className={`relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-200 ${
+                selected === i
+                  ? 'ring-2 ring-[#C9A96E]/60 shadow-[0_0_25px_rgba(201,169,110,0.2)]'
+                  : 'opacity-70 hover:opacity-90'
               }`}
             >
               <img src={img} alt={`Headshot ${i + 1}`} className="w-full aspect-square object-cover" />
-              {/* Watermark overlay */}
+              {/* Watermark */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-white/30 text-lg font-bold rotate-[-30deg] select-none pointer-events-none">
-                  ProHeadshot AI
+                <p className="text-white/20 text-sm font-semibold rotate-[-30deg] select-none pointer-events-none tracking-widest">
+                  PROHEADSHOT.AI
                 </p>
               </div>
+              {/* Selected badge */}
+              {selected === i && (
+                <div className="absolute top-2 right-2 bg-[#C9A96E] text-black text-xs font-bold px-2 py-0.5 rounded-full">
+                  Selected
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         {/* Conversion block */}
-        <div className="bg-slate-800 rounded-2xl p-8 text-center border border-slate-700">
-          <div className="flex items-center justify-center gap-4 mb-4 text-sm">
-            <span className="text-slate-400 line-through">Studio photo: $150+</span>
-            <span className="text-green-400 font-bold text-lg">ProHeadshot AI: $9.99</span>
+        <div className="card-glass rounded-2xl p-8 text-center">
+          {/* Value prop */}
+          <div className="flex items-center justify-center gap-4 mb-6 text-sm">
+            <div className="text-center">
+              <p className="text-white/25 line-through">Studio photo</p>
+              <p className="text-white/40 font-bold text-xl">$150+</p>
+            </div>
+            <div className="text-white/20">vs</div>
+            <div className="text-center">
+              <p className="text-[#C9A96E]/60 text-xs uppercase tracking-widest">ProHeadshot AI</p>
+              <p className="text-[#E8D5A3] font-bold text-3xl">$9.99</p>
+            </div>
           </div>
 
           <button
             onClick={handleUnlock}
-            className="w-full py-4 bg-orange-500 hover:bg-orange-400 text-white font-bold text-xl rounded-xl transition-colors mb-4"
+            className="btn-gold w-full py-4 rounded-xl text-lg mb-5"
           >
             🔓 Unlock HD Headshots — $9.99
           </button>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-300">
-            {[
-              '✓ HD resolution (1024px+)',
-              '✓ No watermark',
-              '✓ Instant download',
-              '✓ All 4 images included',
-            ].map((item, i) => (
-              <div key={i} className="bg-slate-700 rounded-lg p-2 text-center">{item}</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-white/40">
+            {['✓ HD resolution (1024px+)', '✓ No watermark', '✓ Instant download', '✓ All 4 images'].map((item, i) => (
+              <div key={i} className="bg-white/[0.03] rounded-lg px-3 py-2 border border-white/5">{item}</div>
             ))}
           </div>
 
-          <p className="text-slate-500 text-xs mt-4">
-            One-time payment · No subscription · Secure checkout via Stripe
+          <p className="text-white/20 text-xs mt-4">
+            One-time payment · No subscription · Secure checkout via PayPal
           </p>
         </div>
 
         <div className="text-center mt-6">
-          <button onClick={() => router.push('/')} className="text-slate-400 hover:text-white text-sm underline">
+          <button onClick={() => router.push('/')} className="text-white/25 hover:text-[#C9A96E] text-sm transition-colors">
             ← Try a different photo
           </button>
         </div>
@@ -148,7 +154,11 @@ function ResultContent() {
 
 export default function ResultPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-2 border-[#C9A96E]/20 border-t-[#C9A96E] animate-spin" />
+      </div>
+    }>
       <ResultContent />
     </Suspense>
   )
