@@ -6,27 +6,33 @@ import { useSearchParams, useRouter } from 'next/navigation'
 function SuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const sessionId = searchParams.get('session_id')
+  const orderId = searchParams.get('order_id')
+  const jobId = searchParams.get('job_id')
 
-  // Could verify payment here via API
   useEffect(() => {
-    if (!sessionId) {
+    if (!orderId || !jobId) {
       router.push('/')
     }
-  }, [sessionId, router])
+  }, [orderId, jobId, router])
 
   const handleDownload = async () => {
-    const res = await fetch(`/api/download?session_id=${sessionId}`)
+    const res = await fetch(`/api/download?order_id=${orderId}&job_id=${jobId}`)
     const data = await res.json()
-    if (data.urls) {
+
+    if (data.urls && data.urls.length > 0) {
       data.urls.forEach((url: string, i: number) => {
         setTimeout(() => {
           const a = document.createElement('a')
           a.href = url
           a.download = `proheadshot-${i + 1}.jpg`
+          a.target = '_blank'
+          document.body.appendChild(a)
           a.click()
-        }, i * 500)
+          document.body.removeChild(a)
+        }, i * 600)
       })
+    } else {
+      alert('Download failed. Please contact support@proheadshot.ai')
     }
   }
 
@@ -34,9 +40,10 @@ function SuccessContent() {
     <main className="min-h-screen bg-slate-900 text-white flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="text-6xl mb-6">🎉</div>
-        <h1 className="text-3xl font-bold mb-3">Your headshots are ready!</h1>
+        <h1 className="text-3xl font-bold mb-3">Payment Successful!</h1>
         <p className="text-slate-400 mb-8">
-          Download your HD professional headshots below. Links are valid for 24 hours.
+          Your HD professional headshots are ready to download.
+          Links are valid for <strong className="text-white">24 hours</strong>.
         </p>
 
         <button
@@ -46,14 +53,19 @@ function SuccessContent() {
           ⬇️ Download All HD Headshots
         </button>
 
-        <div className="bg-slate-800 rounded-xl p-4 text-sm text-slate-400 mb-6">
-          <p>💡 <strong className="text-white">Pro tip:</strong> Use a light neutral background version for LinkedIn, the white background for your resume, and the corporate version for your company bio.</p>
+        <div className="bg-slate-800 rounded-xl p-4 text-sm text-slate-400 mb-6 text-left">
+          <p className="font-semibold text-white mb-2">💡 Quick usage guide:</p>
+          <ul className="space-y-1">
+            <li>• <strong className="text-slate-300">LinkedIn:</strong> Use the Professional style (light background)</li>
+            <li>• <strong className="text-slate-300">Resume:</strong> Use the Clean style (white background)</li>
+            <li>• <strong className="text-slate-300">Company bio:</strong> Use the Corporate style (dark background)</li>
+          </ul>
         </div>
 
-        <p className="text-slate-500 text-xs mb-4">
-          Download links expire in 24 hours. Having trouble?{' '}
+        <p className="text-slate-500 text-xs mb-6">
+          Download links expire in 24 hours. Need help?{' '}
           <a href="mailto:support@proheadshot.ai" className="text-blue-400 underline">
-            Contact support
+            support@proheadshot.ai
           </a>
         </p>
 
@@ -67,7 +79,11 @@ function SuccessContent() {
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+        Loading...
+      </div>
+    }>
       <SuccessContent />
     </Suspense>
   )

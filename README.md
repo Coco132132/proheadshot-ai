@@ -7,7 +7,7 @@ AI-powered professional headshot generator for LinkedIn, resumes, and corporate 
 - **Frontend:** Next.js 14 (App Router)
 - **Styling:** Tailwind CSS
 - **AI:** [Astria.ai](https://www.astria.ai) API
-- **Payment:** Stripe Checkout
+- **Payment:** PayPal (REST API v2)
 - **Hosting:** Cloudflare Pages
 - **Storage:** Cloudflare R2
 
@@ -28,8 +28,9 @@ cp .env.example .env.local
 
 Required keys:
 - `ASTRIA_API_KEY` — from [astria.ai](https://www.astria.ai/users/edit#api)
-- `STRIPE_SECRET_KEY` — from [Stripe Dashboard](https://dashboard.stripe.com/apikeys)
-- `STRIPE_WEBHOOK_SECRET` — from Stripe webhook settings
+- `PAYPAL_CLIENT_ID` — from [PayPal Developer](https://developer.paypal.com/dashboard/applications)
+- `PAYPAL_CLIENT_SECRET` — from PayPal Developer Dashboard
+- `PAYPAL_ENV` — `sandbox` for testing, `production` for live
 - `NEXT_PUBLIC_BASE_URL` — your deployed domain
 
 ### 3. Run locally
@@ -61,9 +62,9 @@ npm run pages:deploy
 |---|---|---|
 | `/api/generate` | POST | Upload photo → call Astria.ai → return jobId |
 | `/api/result` | GET | Poll for generated images by jobId |
-| `/api/checkout` | POST | Create Stripe Checkout session |
-| `/api/download` | GET | Verify payment → return HD download URLs |
-| `/api/webhook` | POST | Stripe webhook handler |
+| `/api/checkout` | POST | Create PayPal order → return approval URL |
+| `/api/paypal/capture` | GET | PayPal redirect back → capture payment → redirect to /success |
+| `/api/paypal/webhook` | POST | PayPal webhook handler |
 
 ## Pricing
 
