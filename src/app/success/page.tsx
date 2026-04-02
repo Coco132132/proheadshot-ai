@@ -37,7 +37,7 @@ function SuccessContent() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#12110F] text-white flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="text-6xl mb-6">🎉</div>
         <h1 className="text-3xl font-bold mb-3">Payment Successful!</h1>
@@ -80,7 +80,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-[#12110F] flex items-center justify-center text-white">
         Loading...
       </div>
     }>

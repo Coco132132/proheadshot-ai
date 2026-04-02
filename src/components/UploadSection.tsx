@@ -80,7 +80,7 @@ export default function UploadSection() {
       >
         <label
           htmlFor="photo-upload"
-          className="block border border-dashed border-[#C9A96E]/25 hover:border-[#C9A96E]/50 bg-white/[0.02] hover:bg-white/[0.04] rounded-2xl p-8 cursor-pointer transition-all duration-200"
+          className="block border border-dashed border-[#C9A96E]/25 hover:border-[#C9A96E]/50 bg-[#1A1916]/80 hover:bg-[#221F1B] rounded-2xl p-8 cursor-pointer transition-all duration-200"
         >
           {preview ? (
             <div className="text-center">
@@ -114,7 +114,7 @@ export default function UploadSection() {
                 className={`p-3 rounded-xl border text-left transition-all duration-200 ${
                   selectedStyle === s.id
                     ? 'border-[#C9A96E]/60 bg-[#C9A96E]/10 shadow-[0_0_15px_rgba(201,169,110,0.15)]'
-                    : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
+                    : 'border-white/10 hover:border-white/20 bg-[#1A1916]/80'
                 }`}
               >
                 <div className="text-xl mb-1">{s.icon}</div>
@@ -133,7 +133,7 @@ export default function UploadSection() {
             <span>Generating your headshots...</span>
             <span>{progress}%</span>
           </div>
-          <div className="w-full bg-white/5 rounded-full h-1.5">
+          <div className="w-full bg-[#1A1916] rounded-full h-1.5">
             <div
               className="progress-gold h-1.5 rounded-full transition-all duration-700"
               style={{ width: `${progress}%` }}
@@ -149,7 +149,7 @@ export default function UploadSection() {
         className={`w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed ${
           file
             ? 'btn-gold'
-            : 'bg-white/5 text-white/30 border border-white/10 cursor-default'
+            : 'bg-[#1A1916] text-white/30 border border-white/10 cursor-default'
         }`}
       >
         {loading ? 'Generating your headshots...' : file ? 'Generate My Headshots →' : 'Upload a photo to get started'}

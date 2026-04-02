@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#0F0F0F] text-[#F5F0E8]">
+    <main className="min-h-screen bg-[#12110F] text-[#F0EBE1]">
 
       {/* Nav */}
-      <nav className="border-b border-white/5 px-6 py-4">
+      <nav className="border-b border-white/[0.06] px-6 py-4 bg-[#12110F]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <span className="text-gold font-bold text-xl tracking-tight">ProHeadshot<span className="text-white/40 font-light"> AI</span></span>
           <a href="/linkedin-headshot-generator" className="text-sm text-white/40 hover:text-[#C9A96E] transition-colors">
@@ -23,8 +23,10 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative px-4 pt-20 pb-16 text-center overflow-hidden">
-        {/* Ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#C9A96E]/5 blur-[100px] pointer-events-none" />
+        {/* Ambient glow — warm gold, softer */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full bg-[#C9A96E]/6 blur-[120px] pointer-events-none" />
+        {/* Subtle warm radial from center */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-[#8B6914]/5 blur-[80px] pointer-events-none" />
 
         <div className="relative max-w-3xl mx-auto">
           {/* Badge */}
@@ -59,7 +61,7 @@ export default function HomePage() {
       <div className="divider-gold max-w-5xl mx-auto" />
 
       {/* Style previews */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-[#1A1916]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">Three Styles. One Upload.</h2>
@@ -90,7 +92,7 @@ export default function HomePage() {
       <div className="divider-gold max-w-5xl mx-auto" />
 
       {/* How it works */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-[#12110F]">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">How It Works</h2>
@@ -117,7 +119,7 @@ export default function HomePage() {
       <div className="divider-gold max-w-5xl mx-auto" />
 
       {/* FAQ */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-[#1A1916]">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-10 text-center">FAQ</h2>
           <div className="space-y-6">

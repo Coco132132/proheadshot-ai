@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function LinkedInHeadshotPage() {
   return (
-    <main className="min-h-screen bg-[#0F0F0F] text-[#F5F0E8]">
+    <main className="min-h-screen bg-[#12110F] text-[#F0EBE1]">
       {/* Ambient glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#C9A96E]/5 blur-[100px] pointer-events-none" />
 

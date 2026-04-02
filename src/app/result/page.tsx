@@ -46,7 +46,7 @@ function ResultContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+      <div className="min-h-screen bg-[#12110F] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 rounded-full border-2 border-[#C9A96E]/20 border-t-[#C9A96E] animate-spin mx-auto mb-6" />
           <p className="text-[#E8D5A3] text-xl font-semibold mb-2">Generating your headshots...</p>
@@ -58,7 +58,7 @@ function ResultContent() {
 
   if (error || !result) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+      <div className="min-h-screen bg-[#12110F] flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/60 text-xl mb-6">{error || 'Something went wrong.'}</p>
           <button onClick={() => router.push('/')} className="btn-gold px-8 py-3 rounded-xl">
@@ -70,7 +70,7 @@ function ResultContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0F0F0F] text-[#F5F0E8]">
+    <main className="min-h-screen bg-[#12110F] text-[#F0EBE1]">
       {/* Ambient */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] rounded-full bg-[#C9A96E]/4 blur-[120px] pointer-events-none" />
 
@@ -155,7 +155,7 @@ function ResultContent() {
 export default function ResultPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+      <div className="min-h-screen bg-[#12110F] flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-2 border-[#C9A96E]/20 border-t-[#C9A96E] animate-spin" />
       </div>
     }>
