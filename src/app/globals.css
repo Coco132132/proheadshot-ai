@@ -3,88 +3,140 @@
 @tailwind utilities;
 
 :root {
-  --gold-light: #E8D5A3;
+  --gold-light: #ECD9A8;
   --gold-main: #C9A96E;
   --gold-dark: #9A7B4F;
+  --gold-glow: rgba(201, 169, 110, 0.18);
 
-  /* Off-black with slight warm undertone — easier on eyes than pure black */
-  --bg-base: #12110F;
-  --bg-surface: #1A1916;
-  --bg-elevated: #221F1B;
-  --bg-border: rgba(255, 255, 255, 0.07);
+  /* Layered dark palette — 3 distinct surface levels */
+  --bg-base: #0F0E0C;        /* deepest background */
+  --bg-surface: #181610;     /* card/section surface */
+  --bg-elevated: #211E18;    /* highlighted surfaces: upload box, pricing */
+  --bg-border: rgba(255, 255, 255, 0.08);
+  --bg-border-gold: rgba(201, 169, 110, 0.18);
 
-  --text-primary: #F0EBE1;
-  --text-secondary: rgba(240, 235, 225, 0.55);
-  --text-muted: rgba(240, 235, 225, 0.28);
+  /* Text hierarchy — 4 clear levels */
+  --text-primary: #F4EFE6;     /* strong white — headings */
+  --text-secondary: #B8B0A2;   /* light gray — body copy */
+  --text-muted: #6E6860;       /* muted — helper text, captions */
+  --text-faint: #3D3A35;       /* very faint — decorative only */
 }
+
+html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Typography helpers ─── */
+.text-primary   { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted     { color: var(--text-muted); }
 
 /* Gold gradient text */
 .text-gold {
-  background: linear-gradient(135deg, #C9A96E 0%, #E8D5A3 50%, #C9A96E 100%);
+  background: linear-gradient(135deg, #C9A96E 0%, #ECD9A8 55%, #C9A96E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Gold gradient button */
+/* ─── Buttons ─── */
+
+/* Primary gold CTA */
 .btn-gold {
-  background: linear-gradient(135deg, #9A7B4F 0%, #C9A96E 40%, #E8D5A3 70%, #C9A96E 100%);
-  background-size: 200% auto;
-  color: #1A1410;
+  background: linear-gradient(135deg, #9A7B4F 0%, #C9A96E 45%, #ECD9A8 72%, #C9A96E 100%);
+  background-size: 220% auto;
+  color: #15120A;
   font-weight: 700;
-  transition: background-position 0.4s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 4px 20px rgba(201, 169, 110, 0.25);
+  letter-spacing: 0.01em;
+  transition: background-position 0.45s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 24px rgba(201, 169, 110, 0.28), 0 1px 0 rgba(255,255,255,0.08) inset;
 }
 .btn-gold:hover {
   background-position: right center;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 28px rgba(201, 169, 110, 0.38);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(201, 169, 110, 0.42), 0 1px 0 rgba(255,255,255,0.12) inset;
 }
 .btn-gold:active {
-  transform: translateY(0);
+  transform: translateY(0px);
+  box-shadow: 0 3px 14px rgba(201, 169, 110, 0.22);
 }
 .btn-gold:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-/* Surface card */
+/* ─── Cards ─── */
+
+/* Base surface card */
 .card-surface {
   background-color: var(--bg-surface);
   border: 1px solid var(--bg-border);
 }
 
-/* Glass card */
+/* Glass card — slightly lighter, gold-tinted border */
 .card-glass {
-  background: rgba(255, 252, 245, 0.03);
-  border: 1px solid rgba(201, 169, 110, 0.12);
+  background: rgba(255, 252, 245, 0.033);
+  border: 1px solid rgba(201, 169, 110, 0.13);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Subtle gold glow on hover */
+/* Elevated card — for upload, pricing, hero highlight areas */
+.card-elevated {
+  background-color: var(--bg-elevated);
+  border: 1px solid rgba(201, 169, 110, 0.22);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset,
+              0 4px 32px rgba(0, 0, 0, 0.35),
+              0 0 48px rgba(201, 169, 110, 0.07);
+}
+
+/* ─── Hover effects ─── */
 .glow-gold:hover {
-  border-color: rgba(201, 169, 110, 0.3);
-  box-shadow: 0 0 0 0px rgba(201, 169, 110, 0), 0 2px 16px rgba(201, 169, 110, 0.1);
+  border-color: rgba(201, 169, 110, 0.35);
+  box-shadow: 0 2px 20px rgba(201, 169, 110, 0.12);
   transition: all 0.25s ease;
 }
 
-/* Divider */
+/* ─── Dividers ─── */
 .divider-gold {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.18), transparent);
+  background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.22), transparent);
 }
 
-/* Progress bar */
+/* ─── Progress bar ─── */
 .progress-gold {
-  background: linear-gradient(90deg, #9A7B4F, #E8D5A3);
+  background: linear-gradient(90deg, #9A7B4F, #ECD9A8);
+}
+
+/* ─── Badge ─── */
+.badge-gold {
+  background: rgba(201, 169, 110, 0.1);
+  border: 1px solid rgba(201, 169, 110, 0.25);
+  color: var(--gold-main);
+}
+
+/* ─── Watermark text ─── */
+.watermark-text {
+  color: rgba(255,255,255,0.12);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  transform: rotate(-30deg);
+  user-select: none;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* ─── Mobile tweaks ─── */
+@media (max-width: 640px) {
+  .text-primary   { color: #F4EFE6; }
+  .text-secondary { color: #C0B8AA; }
 }
