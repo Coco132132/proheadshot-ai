@@ -30,22 +30,23 @@ export async function POST(req: NextRequest) {
 
     const prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.professional
 
-    // Call Replicate — photomaker model
-    const response = await fetch('https://api.replicate.com/v1/models/tencentarc/photomaker/predictions', {
+    // Call Replicate photomaker model (use /v1/predictions with version pin)
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
-        Prefer: 'wait=60', // wait up to 60s for result
+        Prefer: 'wait=60',
       },
       body: JSON.stringify({
+        version: 'ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4',
         input: {
           prompt: `img ${prompt}`,
           input_image: dataUri,
           num_outputs: 4,
-          num_inference_steps: 30,
+          num_steps: 30,
           style_strength_ratio: 35,
-          guidance_scale: 7.5,
+          guidance_scale: 5,
         },
       }),
     })

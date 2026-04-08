@@ -70,18 +70,18 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               {
-                before: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300&h=300&fit=crop',
-                after:  'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&h=300&fit=crop',
+                before: '/images/before1.webp',
+                after:  '/images/after1.webp',
                 label: 'James · Software Engineer',
               },
               {
-                before: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop',
-                after:  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop',
+                before: '/images/before2.webp',
+                after:  '/images/after2.webp',
                 label: 'Sarah · Marketing Manager',
               },
               {
-                before: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop',
-                after:  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=300&fit=crop',
+                before: '/images/before3.webp',
+                after:  '/images/after3.webp',
                 label: 'David · Business Consultant',
               },
             ].map((item, i) => (
@@ -93,7 +93,7 @@ export default function HomePage() {
                     <img
                       src={item.before}
                       alt="Before"
-                      className="w-full aspect-square object-cover rounded-xl grayscale opacity-50 ring-1 ring-white/[0.06]"
+                      className="w-full aspect-square object-cover rounded-xl ring-1 ring-white/[0.06]"
                     />
                   </div>
                   {/* Arrow */}
@@ -131,7 +131,7 @@ export default function HomePage() {
                 style: 'Professional',
                 tag: 'Best for LinkedIn',
                 desc: 'Clean neutral background with soft studio lighting. The definitive look for LinkedIn profiles and professional networks.',
-                icon: '💼',
+                img: '/images/style-professional.webp',
                 accent: 'border-blue-500/20',
                 glow: 'bg-blue-900/10',
               },
@@ -139,7 +139,7 @@ export default function HomePage() {
                 style: 'Clean',
                 tag: 'Best for Resume',
                 desc: 'Pure white background, formal business attire. Sharp and credible — the standard for job applications.',
-                icon: '📄',
+                img: '/images/style-clean.webp',
                 accent: 'border-zinc-500/20',
                 glow: 'bg-zinc-700/8',
               },
@@ -147,7 +147,7 @@ export default function HomePage() {
                 style: 'Corporate',
                 tag: 'Best for Company Profiles',
                 desc: 'Dark gradient, polished executive tone. Perfect for company bios, press kits, and leadership pages.',
-                icon: '🏢',
+                img: '/images/style-corporate.webp',
                 accent: 'border-[#C9A96E]/25',
                 glow: 'bg-amber-900/10',
               },
@@ -156,8 +156,8 @@ export default function HomePage() {
                 key={item.style}
                 className={`card-glass rounded-2xl p-6 glow-gold transition-all duration-300 ${item.glow}`}
               >
-                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl h-36 flex items-center justify-center mb-5 text-5xl">
-                  {item.icon}
+                <div className="rounded-xl aspect-square overflow-hidden mb-5">
+                  <img src={item.img} alt={item.style} className="w-full h-full object-cover" />
                 </div>
                 <p className="font-bold text-[#ECD9A8] text-lg mb-1">{item.style}</p>
                 <p className="text-[#6E6860] text-xs mb-4 leading-relaxed">{item.desc}</p>

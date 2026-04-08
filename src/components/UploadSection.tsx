@@ -3,17 +3,10 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
-const STYLES = [
-  { id: 'professional', label: 'Professional', desc: 'Best for LinkedIn', icon: '💼' },
-  { id: 'clean',        label: 'Clean',        desc: 'Best for Resume', icon: '📄' },
-  { id: 'corporate',   label: 'Corporate',    desc: 'Best for Company Profiles', icon: '🏢' },
-]
-
 export default function UploadSection() {
   const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
-  const [selectedStyle, setSelectedStyle] = useState('professional')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
@@ -51,7 +44,6 @@ export default function UploadSection() {
     try {
       const formData = new FormData()
       formData.append('photo', file)
-      formData.append('style', selectedStyle)
 
       setProgress(30)
       const res = await fetch('/api/generate', { method: 'POST', body: formData })
@@ -111,31 +103,19 @@ export default function UploadSection() {
         {error && <p className="text-red-400/80 text-sm mt-2 text-center">{error}</p>}
       </div>
 
-      {/* ── Style Selector ── */}
+      {/* ── What you'll get ── */}
       {file && (
-        <div className="mb-5">
-          <p className="text-[#6E6860] text-[10px] uppercase tracking-[0.15em] mb-3 font-medium">Choose style</p>
-          <div className="grid grid-cols-3 gap-2">
-            {STYLES.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setSelectedStyle(s.id)}
-                className={`p-3 rounded-xl border text-left transition-all duration-200 ${
-                  selectedStyle === s.id
-                    ? 'border-[#C9A96E]/55 bg-[#C9A96E]/10 shadow-[0_0_18px_rgba(201,169,110,0.14)]'
-                    : 'border-white/[0.08] hover:border-[#C9A96E]/25 bg-[#181610]'
-                }`}
-              >
-                <div className="text-xl mb-1">{s.icon}</div>
-                <p className={`text-sm font-semibold leading-tight ${
-                  selectedStyle === s.id ? 'text-[#ECD9A8]' : 'text-[#B8B0A2]'
-                }`}>
-                  {s.label}
-                </p>
-                <p className="text-[10px] text-[#6E6860] mt-0.5">{s.desc}</p>
-              </button>
-            ))}
-          </div>
+        <div className="mb-5 flex items-center justify-center gap-4">
+          {[
+            { icon: '💼', label: 'Professional' },
+            { icon: '📄', label: 'Clean' },
+            { icon: '🏢', label: 'Corporate' },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-1.5 text-[#6E6860] text-xs">
+              <span>{s.icon}</span>
+              <span>{s.label}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -143,7 +123,7 @@ export default function UploadSection() {
       {loading && (
         <div className="mb-5">
           <div className="flex justify-between text-xs text-[#6E6860] mb-2">
-            <span>Generating your headshots...</span>
+            <span>Generating 3 styles...</span>
             <span>{progress}%</span>
           </div>
           <div className="w-full bg-[#181610] rounded-full h-1.5 overflow-hidden">
@@ -168,12 +148,12 @@ export default function UploadSection() {
         {loading
           ? 'Generating your headshots...'
           : file
-          ? 'Generate My Headshot →'
+          ? 'Generate All 3 Styles →'
           : 'Upload Photo & Generate Headshot'}
       </button>
 
       <p className="text-[#6E6860] text-xs mt-3 text-center leading-relaxed">
-        Free preview · $9.99 to unlock HD · No subscription · No account needed
+        3 styles generated automatically · Free preview · $9.99 to unlock HD
       </p>
     </div>
   )
