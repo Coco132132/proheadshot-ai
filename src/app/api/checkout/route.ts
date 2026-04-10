@@ -1,98 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// POST /api/checkout
-// Body: { jobId }
-// Returns: { url } — PayPal order approval URL
-export async function POST(req: NextRequest) {
+export const runtime = 'edge'
+
+const PRICES = {
+  basic: '9.90',   // 3 photos
+  full:  '14.90',  // 9 photos
+  upgrade: '5.00', // upgrade from basic to full
+}
+
+// PayPal 凭证（Live 正式环境）
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AQsIbmo4Niy5eDz22EXCYVVkyZuKgRs83kDAiWkYfIE8-9RfZ-tKCuCzf8bB_66wpmrHpR47xOc_h9FS'
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET || 'ENLhnV8UNx0B0z8NlQUx8guqo4OchLFF1iOerpPCe5-E2msVQu3sUFukZnK2VEY38MnArG5HlPo6Bc84'
+const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live'
+const PAYPAL_BASE = PAYPAL_MODE === 'sandbox'
+  ? 'https://api-m.sandbox.paypal.com'
+  : 'https://api-m.paypal.com'
+
+async function getToken(): Promise<string> {
+  const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`)}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  })
+  const data = await res.json() as { access_token?: string }
+  if (!data.access_token) throw new Error('Failed to get PayPal token')
+  return data.access_token
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { jobId } = await req.json()
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return NextResponse.json({ error: 'Payment not configured' }, { status: 500 })
+    }
+
+    const body = await request.json() as { jobId?: string; tier?: 'basic' | 'full' | 'upgrade' }
+    const jobId = body.jobId
+    const tier = body.tier || 'basic'
 
     if (!jobId) {
       return NextResponse.json({ error: 'Missing jobId' }, { status: 400 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const accessToken = await getPayPalAccessToken()
+    const price = PRICES[tier] || PRICES.basic
+    const descriptions = {
+      basic:   'ProHeadshot AI — Best 3 HD Headshots',
+      full:    'ProHeadshot AI — All 9 HD Headshots',
+      upgrade: 'ProHeadshot AI — Upgrade to All 9 Photos',
+    }
 
-    // Create PayPal order
-    const orderRes = await fetch(`${getPayPalBase()}/v2/checkout/orders`, {
+    const token = await getToken()
+    const origin = new URL(request.url).origin
+
+    const orderRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'PayPal-Request-Id': `${jobId}-${tier}`,
       },
       body: JSON.stringify({
         intent: 'CAPTURE',
-        purchase_units: [
-          {
-            amount: {
-              currency_code: 'USD',
-              value: '9.99',
-            },
-            description: 'ProHeadshot AI — HD Headshots (4 images, no watermark)',
-            custom_id: jobId, // Store jobId for webhook lookup
-          },
-        ],
+        purchase_units: [{
+          amount: { currency_code: 'USD', value: price },
+          description: descriptions[tier],
+          custom_id: `${jobId}:${tier}`,
+        }],
         application_context: {
           brand_name: 'ProHeadshot AI',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
-          return_url: `${baseUrl}/api/paypal/capture?jobId=${jobId}`,
-          cancel_url: `${baseUrl}/result?jobId=${jobId}`,
+          return_url: `${origin}/success?jobId=${jobId}&tier=${tier}`,
+          cancel_url: `${origin}/result?jobId=${jobId}`,
         },
       }),
     })
 
-    if (!orderRes.ok) {
-      const err = await orderRes.text()
-      console.error('PayPal order error:', err)
-      return NextResponse.json({ error: 'Failed to create PayPal order' }, { status: 500 })
+    const order = await orderRes.json() as {
+      id?: string
+      links?: { rel: string; href: string }[]
     }
 
-    const order = await orderRes.json()
-
-    // Find the approval URL to redirect the user
-    const approvalUrl = order.links?.find(
-      (link: { rel: string; href: string }) => link.rel === 'approve'
-    )?.href
-
-    if (!approvalUrl) {
-      return NextResponse.json({ error: 'No approval URL from PayPal' }, { status: 500 })
+    if (!order.id) {
+      console.error('PayPal order error:', order)
+      return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 })
     }
 
-    return NextResponse.json({ url: approvalUrl, orderId: order.id })
+    const approveLink = order.links?.find(l => l.rel === 'approve')?.href
+    if (!approveLink) {
+      return NextResponse.json({ error: 'No payment link returned' }, { status: 500 })
+    }
+
+    return NextResponse.json({ url: approveLink, orderId: order.id })
   } catch (err) {
     console.error('Checkout error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Checkout failed. Please try again.' }, { status: 500 })
   }
-}
-
-// --- PayPal helpers ---
-
-function getPayPalBase() {
-  return process.env.PAYPAL_ENV === 'production'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com'
-}
-
-async function getPayPalAccessToken(): Promise<string> {
-  const clientId = process.env.PAYPAL_CLIENT_ID!
-  const clientSecret = process.env.PAYPAL_CLIENT_SECRET!
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-
-  const res = await fetch(`${getPayPalBase()}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  })
-
-  if (!res.ok) {
-    throw new Error('Failed to get PayPal access token')
-  }
-
-  const data = await res.json()
-  return data.access_token
 }

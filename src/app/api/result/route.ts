@@ -1,49 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
-// GET /api/result?jobId=xxx
-// Polls Replicate prediction status and returns images when ready
-export async function GET(req: NextRequest) {
-  const jobId = req.nextUrl.searchParams.get('jobId')
+export const runtime = 'edge'
 
-  if (!jobId) {
-    return NextResponse.json({ error: 'Missing jobId' }, { status: 400 })
-  }
-
-  const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN
-  if (!REPLICATE_API_TOKEN) {
-    return NextResponse.json({ error: 'API not configured' }, { status: 500 })
-  }
-
+export async function GET(request: NextRequest) {
   try {
-    const res = await fetch(`https://api.replicate.com/v1/predictions/${jobId}`, {
-      headers: { Authorization: `Bearer ${REPLICATE_API_TOKEN}` },
-    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kv = (getRequestContext().env as any).JOBS
 
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Failed to fetch result' }, { status: 500 })
+    if (!kv) {
+      return NextResponse.json({ error: 'Storage not available' }, { status: 500 })
     }
 
-    const prediction = await res.json()
+    const { searchParams } = new URL(request.url)
+    const jobId = searchParams.get('jobId')
 
-    if (prediction.status === 'starting' || prediction.status === 'processing') {
-      return NextResponse.json({ status: 'pending', jobId })
+    if (!jobId) {
+      return NextResponse.json({ error: 'Missing jobId' }, { status: 400 })
     }
 
-    if (prediction.status === 'failed') {
-      return NextResponse.json({ error: 'Generation failed. Please try again.' }, { status: 500 })
+    const raw = await kv.get(jobId)
+    if (!raw) {
+      return NextResponse.json({ status: 'pending', images: null })
     }
 
-    if (prediction.status === 'succeeded' && prediction.output) {
-      return NextResponse.json({
-        jobId,
-        status: 'complete',
-        images: prediction.output.slice(0, 4),
-      })
-    }
-
-    return NextResponse.json({ status: 'pending', jobId })
+    return NextResponse.json(JSON.parse(raw))
   } catch (err) {
-    console.error('Result fetch error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Result error:', err)
+    return NextResponse.json({ error: 'Failed to load results.' }, { status: 500 })
   }
 }

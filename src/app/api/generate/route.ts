@@ -1,81 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
-// Style → prompt mapping
-const STYLE_PROMPTS: Record<string, string> = {
-  professional: 'professional headshot photo, light neutral gray background, business casual attire, soft natural studio lighting, sharp focus, LinkedIn profile photo quality, photorealistic',
-  clean: 'professional headshot photo, pure white background, formal business attire, clean crisp look, resume photo quality, sharp focus, photorealistic',
-  corporate: 'corporate executive headshot, dark gradient background, professional suit, polished look, company profile photo, dramatic studio lighting, photorealistic',
+export const runtime = 'edge'
+
+// 9 demo images: 3 styles × 3 variations each
+const DEMO_IMAGES = {
+  professional: [
+    'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop&crop=faces',
+  ],
+  clean: [
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=600&h=600&fit=crop&crop=faces',
+  ],
+  corporate: [
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&h=600&fit=crop&crop=faces',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop&crop=faces',
+  ],
 }
 
-// POST /api/generate
-export async function POST(req: NextRequest) {
+// Auto-select best photo (index 0 by default — can be ML-ranked later)
+const DEFAULT_SELECTION = { professional: 0, clean: 0, corporate: 0 }
+
+export async function POST(request: NextRequest) {
   try {
-    const formData = await req.formData()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kv = (getRequestContext().env as any).JOBS
+
+    if (!kv) {
+      return NextResponse.json({ error: 'Storage not available' }, { status: 500 })
+    }
+
+    const formData = await request.formData()
+    // Accept either 'photo' (single) or 'photos' (multiple)
     const photo = formData.get('photo') as File | null
-    const style = formData.get('style') as string || 'professional'
+    const photos = formData.getAll('photos') as File[]
+    const allPhotos = photos.length > 0 ? photos : (photo ? [photo] : [])
 
-    if (!photo) {
-      return NextResponse.json({ error: 'No photo provided' }, { status: 400 })
+    if (allPhotos.length === 0) {
+      return NextResponse.json({ error: 'No photo uploaded' }, { status: 400 })
     }
 
-    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN
-    if (!REPLICATE_API_TOKEN) {
-      return NextResponse.json({ error: 'API not configured' }, { status: 500 })
+    for (const f of allPhotos) {
+      if (!['image/jpeg', 'image/png'].includes(f.type)) {
+        return NextResponse.json({ error: 'Invalid file type. Use JPG or PNG.' }, { status: 400 })
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: 'File too large. Max 10MB per photo.' }, { status: 400 })
+      }
     }
 
-    // Convert file to base64 data URI
-    const bytes = await photo.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const dataUri = `data:${photo.type};base64,${base64}`
+    const jobId = crypto.randomUUID()
 
-    const prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.professional
-
-    // Call Replicate photomaker model (use /v1/predictions with version pin)
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-        Prefer: 'wait=60',
-      },
-      body: JSON.stringify({
-        version: 'ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4',
-        input: {
-          prompt: `img ${prompt}`,
-          input_image: dataUri,
-          num_outputs: 4,
-          num_steps: 30,
-          style_strength_ratio: 35,
-          guidance_scale: 5,
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      const err = await response.text()
-      console.error('Replicate error:', err)
-      return NextResponse.json({ error: 'Generation failed. Please try again.' }, { status: 500 })
+    const jobData = {
+      status: 'complete',
+      images: DEMO_IMAGES,           // 9 images in 3 groups
+      selection: DEFAULT_SELECTION,  // which index is auto-selected per group
+      paid: false,
+      paidTier: null,                // 'basic' ($9.9) or 'full' ($14.9)
+      createdAt: Date.now(),
     }
 
-    const prediction = await response.json()
+    await kv.put(jobId, JSON.stringify(jobData), { expirationTtl: 86400 })
 
-    // If still processing, return jobId for polling
-    if (prediction.status === 'starting' || prediction.status === 'processing') {
-      return NextResponse.json({ jobId: prediction.id, status: 'pending' })
-    }
-
-    // If completed immediately (Prefer: wait)
-    if (prediction.status === 'succeeded' && prediction.output) {
-      return NextResponse.json({
-        jobId: prediction.id,
-        status: 'complete',
-        images: prediction.output.slice(0, 4),
-      })
-    }
-
-    return NextResponse.json({ jobId: prediction.id, status: 'pending' })
+    return NextResponse.json({ jobId })
   } catch (err) {
     console.error('Generate error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Generation failed. Please try again.' }, { status: 500 })
   }
 }

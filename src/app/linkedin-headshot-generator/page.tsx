@@ -1,3 +1,5 @@
+export const runtime = 'edge'
+
 import type { Metadata } from 'next'
 import UploadSection from '@/components/UploadSection'
 
@@ -112,7 +114,7 @@ export default function LinkedInHeadshotPage() {
       </section>
 
       <footer className="border-t border-white/5 py-8 px-4 text-center text-white/20 text-sm">
-        <p>© 2024 ProHeadshot AI · <a href="/" className="hover:text-[#C9A96E] transition-colors">AI Headshot Generator</a> · Privacy · Terms</p>
+        <p>© 2026 ProHeadshot AI · <a href="/" className="hover:text-[#C9A96E] transition-colors">AI Headshot Generator</a> · Privacy · Terms</p>
       </footer>
     </main>
   )
