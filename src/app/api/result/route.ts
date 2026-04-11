@@ -4,7 +4,8 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const FAL_MODEL = 'fal-ai/flux-pro/kontext'
+// Kontext is submitted under fal-ai/flux-pro/kontext, but results are polled under fal-ai/flux-pro
+const FAL_POLL_BASE = 'fal-ai/flux-pro'
 
 interface FalRequest {
   style: 'professional' | 'clean' | 'corporate'
@@ -31,32 +32,44 @@ interface JobData {
 }
 
 // ── Check one fal.ai queue request ──
+// Kontext submits to fal-ai/flux-pro/kontext but polls via fal-ai/flux-pro
 async function checkRequest(requestId: string): Promise<{ done: boolean; imageUrl?: string }> {
-  const res = await fetch(`https://queue.fal.run/${FAL_MODEL}/requests/${requestId}`, {
+  // Step 1: check status
+  const statusRes = await fetch(`https://queue.fal.run/${FAL_POLL_BASE}/requests/${requestId}/status`, {
     headers: { 'Authorization': `Key ${FAL_KEY}` },
   })
+  if (!statusRes.ok) return { done: false }
 
-  if (!res.ok) return { done: false }
+  const statusData = await statusRes.json() as { status?: string }
 
-  const data = await res.json() as {
-    status?: string
-    images?: { url: string }[]
-    image?: { url: string }
-    output?: { images?: { url: string }[] }
-  }
-
-  // Kontext / flux-pro: status=COMPLETED with images array
-  if (data.status === 'COMPLETED') {
-    const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url
-    return { done: true, imageUrl }
-  }
-
-  if (data.status === 'FAILED' || data.status === 'ERROR') {
+  if (statusData.status === 'FAILED' || statusData.status === 'ERROR') {
     return { done: true, imageUrl: undefined }
   }
 
-  // Still in queue or processing
-  return { done: false }
+  if (statusData.status !== 'COMPLETED') {
+    return { done: false }
+  }
+
+  // Step 2: fetch actual output
+  const outputRes = await fetch(`https://queue.fal.run/${FAL_POLL_BASE}/requests/${requestId}`, {
+    headers: { 'Authorization': `Key ${FAL_KEY}` },
+  })
+  if (!outputRes.ok) return { done: true, imageUrl: undefined }
+
+  const data = await outputRes.json() as {
+    images?: { url: string }[]
+    image?: { url: string }
+    output?: { images?: { url: string }[] }
+    detail?: unknown
+  }
+
+  if (data.detail) {
+    // API returned an error in output
+    return { done: true, imageUrl: undefined }
+  }
+
+  const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url
+  return { done: true, imageUrl }
 }
 
 export async function GET(request: NextRequest) {
