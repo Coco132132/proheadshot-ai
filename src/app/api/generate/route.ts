@@ -11,15 +11,15 @@ const FAL_MODEL = 'fal-ai/pulid'
 const STYLES_MALE = {
   professional: {
     label: 'Professional',
-    prompt: 'professional business headshot of a man, half body portrait from waist up, blurred modern office glass interior background with soft bokeh, wearing navy blue blazer without tie over light dress shirt, fabric has natural texture without excessive wrinkles, uniform skin tone across face and neck, warm soft lighting, friendly natural smile, relaxed expression, subtle micro expression, realistic skin texture, candid feeling, approachable and confident, natural balanced posture, photorealistic photography Canon 85mm f/1.4 shallow depth of field',
+    prompt: 'professional business headshot of a man, half body portrait from waist up, blurred modern office glass interior background with soft bokeh, wearing blazer in gray or navy blue tones without tie over light dress shirt, fabric has natural texture without excessive wrinkles, uniform skin tone across face and neck, warm soft lighting, friendly natural smile, relaxed expression, subtle micro expression, realistic skin texture, candid feeling, approachable and confident, natural balanced posture, photorealistic photography Canon 85mm f/1.4 shallow depth of field',
   },
   clean: {
     label: 'Clean',
-    prompt: 'formal resume headshot of a man, head and upper chest framing, clean pure white studio seamless background, wearing formal well-tailored suit with crisp dress shirt and striped tie, fabric has refined texture without excessive creases, uniform skin tone across face and neck, neutral but natural expression with slight micro expression, even soft studio lighting, symmetrical face, minimal polished style, professional and calm, realistic skin texture, sharp photorealistic photography Nikon 85mm',
+    prompt: 'formal resume headshot of a man, head and upper chest framing, clean pure white studio seamless background, wearing formal well-tailored suit in charcoal gray or navy blue with crisp dress shirt and coordinated patterned tie in complementary color, fabric has refined luxurious texture without excessive creases, uniform skin tone across face and neck, neutral but natural expression with slight micro expression, even soft studio lighting, symmetrical face, minimal polished style, professional and calm, realistic skin texture, sharp photorealistic photography Nikon 85mm',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'corporate executive portrait of a man, half body portrait from waist up, blurred modern corporate indoor lobby or conference room background with cinematic lighting, wearing dark charcoal suit with crisp dress shirt and refined tie, fabric has luxurious texture without excessive wrinkles, uniform skin tone across face and neck, confident but relaxed smile, cinematic directional lighting, high-end professional look, natural posture, subtle expression, realistic face, photorealistic photography Sony 85mm GM f/1.4',
+    prompt: 'corporate executive portrait of a man, half body portrait from waist up, blurred modern corporate indoor lobby or conference room background with cinematic lighting, wearing premium suit in dark charcoal gray or deep navy with crisp dress shirt and elegant patterned tie in coordinated matching color, fabric has luxurious refined texture without excessive wrinkles, uniform skin tone across face and neck, confident but relaxed smile, cinematic directional lighting, high-end professional look, natural posture, subtle expression, realistic face, photorealistic photography Sony 85mm GM f/1.4',
   },
 }
 
