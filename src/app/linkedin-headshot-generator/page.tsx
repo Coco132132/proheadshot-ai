@@ -4,9 +4,16 @@ import type { Metadata } from 'next'
 import UploadSection from '@/components/UploadSection'
 
 export const metadata: Metadata = {
-  title: 'LinkedIn Headshot Generator — AI Professional Photos | ProHeadshot AI',
-  description: 'Generate a professional LinkedIn headshot with AI. Upload your photo and get studio-quality results in under 60 seconds. No photographer needed.',
-  keywords: 'linkedin headshot generator, linkedin profile photo, professional linkedin photo AI',
+  title: 'LinkedIn Headshot Generator — AI Professional Photos',
+  description: 'Generate a professional LinkedIn headshot with AI in under 60 seconds. Upload your photo, get 9 studio-quality results. From $9.9. No signup.',
+  keywords: 'linkedin headshot generator, linkedin profile photo AI, professional linkedin headshot, linkedin photo maker',
+  alternates: { canonical: 'https://getproheadshot.com/linkedin-headshot-generator' },
+  openGraph: {
+    title: 'LinkedIn Headshot Generator — AI Photos in 60 Seconds',
+    description: 'Upload a selfie → get 9 professional LinkedIn headshots. No photographer, no studio, no signup. From $9.9.',
+    url: 'https://getproheadshot.com/linkedin-headshot-generator',
+    images: [{ url: 'https://getproheadshot.com/og-image.jpg', width: 1200, height: 630 }],
+  },
 }
 
 export default function LinkedInHeadshotPage() {

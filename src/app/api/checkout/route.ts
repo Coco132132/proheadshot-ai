@@ -8,11 +8,21 @@ const PRICES = {
   upgrade: '5.00', // upgrade from basic to full
 }
 
-// PayPal 凭证（Live 正式环境）
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AQsIbmo4Niy5eDz22EXCYVVkyZuKgRs83kDAiWkYfIE8-9RfZ-tKCuCzf8bB_66wpmrHpR47xOc_h9FS'
-const PAYPAL_SECRET = process.env.PAYPAL_SECRET || 'ENLhnV8UNx0B0z8NlQUx8guqo4OchLFF1iOerpPCe5-E2msVQu3sUFukZnK2VEY38MnArG5HlPo6Bc84'
-const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live'
-const PAYPAL_BASE = PAYPAL_MODE === 'sandbox'
+// ── PayPal 凭证 ──
+// 测试模式: 把 PAYPAL_MODE 改为 'sandbox' 并填入沙盒凭证
+const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox'  // ← 沙盒测试中
+
+// Live
+const LIVE_CLIENT_ID = 'AQsIbmo4Niy5eDz22EXCYVVkyZuKgRs83kDAiWkYfIE8-9RfZ-tKCuCzf8bB_66wpmrHpR47xOc_h9FS'
+const LIVE_SECRET    = 'ENLhnV8UNx0B0z8NlQUx8guqo4OchLFF1iOerpPCe5-E2msVQu3sUFukZnK2VEY38MnArG5HlPo6Bc84'
+
+// Sandbox
+const SANDBOX_CLIENT_ID = process.env.PAYPAL_SANDBOX_CLIENT_ID || 'AUp0IDgelo6mamPmF4B2dL6UpVtTHcJ0XXUuGwKrezrundT5FcxWLvzmhF0tvqBsI19tB0EpOkPgU2OP'
+const SANDBOX_SECRET    = process.env.PAYPAL_SANDBOX_SECRET    || 'ELfh8QNPH_dcE7gwNX4MDR2AtcfyNVwsL9QOZHz0Qu90AjvfMp20R1D6ghix3bmiLtIPfa3VQYb8qM7U'
+
+const PAYPAL_CLIENT_ID = PAYPAL_MODE === 'sandbox' ? SANDBOX_CLIENT_ID : LIVE_CLIENT_ID
+const PAYPAL_SECRET    = PAYPAL_MODE === 'sandbox' ? SANDBOX_SECRET    : LIVE_SECRET
+const PAYPAL_BASE      = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com'
 

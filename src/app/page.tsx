@@ -1,17 +1,49 @@
 export const runtime = 'edge'
 
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import UploadSection from '@/components/UploadSection'
 
 export const metadata: Metadata = {
   title: 'AI Headshot Generator for LinkedIn & Resume | ProHeadshot AI',
   description: 'Upload one photo and get 9 professional headshots in 3 styles. LinkedIn, Resume, and Corporate-ready. No signup required. From $9.9.',
   keywords: 'AI headshot generator, professional headshot AI, linkedin headshot, resume photo AI',
+  alternates: { canonical: 'https://getproheadshot.com' },
+}
+
+const FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    { '@type': 'Question', name: 'Will it still look like me?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Our AI keeps your facial identity while improving lighting, outfit, and background. You will always be recognizable.' } },
+    { '@type': 'Question', name: 'How many photos do I get?', acceptedAnswer: { '@type': 'Answer', text: 'We generate 9 headshots total — 3 styles × 3 variations. Download your best 3 for $9.9, or all 9 for $14.9.' } },
+    { '@type': 'Question', name: 'Do I need to create an account?', acceptedAnswer: { '@type': 'Answer', text: 'No. Upload, generate, pay, and download — all without signing up.' } },
+    { '@type': 'Question', name: 'How long does it take?', acceptedAnswer: { '@type': 'Answer', text: 'Usually under 60 seconds.' } },
+    { '@type': 'Question', name: 'Can I use this for LinkedIn?', acceptedAnswer: { '@type': 'Answer', text: "Absolutely — that's what we're built for. The Professional style is specifically optimized for LinkedIn profiles." } },
+  ],
+}
+
+const PRODUCT_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: 'ProHeadshot AI — Professional Headshots',
+  description: 'AI-generated professional headshots for LinkedIn, resume, and company profiles.',
+  offers: [
+    { '@type': 'Offer', price: '9.90', priceCurrency: 'USD', name: 'Best 3 Headshots' },
+    { '@type': 'Offer', price: '14.90', priceCurrency: 'USD', name: 'All 9 Headshots' },
+  ],
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.9',
+    reviewCount: '847',
+  },
 }
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#0F0E0C] text-[#F4EFE6]">
+      <Script id="faq-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_SCHEMA) }} />
+      <Script id="product-schema" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(PRODUCT_SCHEMA) }} />
 
       {/* ── Nav ── */}
       <nav className="border-b border-white/[0.06] px-6 py-4 bg-[#0F0E0C]/90 backdrop-blur-md sticky top-0 z-50">

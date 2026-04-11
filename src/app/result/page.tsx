@@ -36,6 +36,7 @@ function ResultContent() {
   const [job, setJob] = useState<JobData | null>(null)
   const [loading, setLoading] = useState(true)
   const [pollCount, setPollCount] = useState(0)
+  const [totalCount] = useState(9)
   const [error, setError] = useState<string | null>(null)
   const [selection, setSelection] = useState<{ professional: number; clean: number; corporate: number }>({ professional: 0, clean: 0, corporate: 0 })
   const [lightbox, setLightbox] = useState<{ style: keyof ImageGroups; idx: number } | null>(null)
@@ -82,7 +83,7 @@ function ResultContent() {
       try {
         const res = await fetch(`/api/result?jobId=${jobId}`)
         if (!res.ok) throw new Error('Failed to load results')
-        const data = await res.json() as JobData
+        const data = await res.json() as JobData & { progress?: number; doneCount?: number; totalCount?: number }
 
         if (data.status === 'complete' && data.images) {
           setJob(data)
@@ -93,8 +94,8 @@ function ResultContent() {
         if (data.error) { setError(data.error); setLoading(false); return }
 
         attempts++
-        setPollCount(attempts)
-        if (attempts >= 30) { setError('Generation timed out. Please try again.'); setLoading(false); return }
+        setPollCount(data.doneCount ?? attempts)
+        if (attempts >= 60) { setError('Generation timed out. Please try again.'); setLoading(false); return }
         setTimeout(poll, 3000)
       } catch {
         setError('Failed to load your headshots. Please try again.')
@@ -115,7 +116,7 @@ function ResultContent() {
         body: JSON.stringify({ jobId, tier }),
       })
       const data = await res.json() as { url?: string }
-      if (data.url) window.location.href = data.url
+      if (data.url) window.open(data.url, '_blank')
     } finally {
       setPaying(false)
     }
@@ -131,7 +132,7 @@ function ResultContent() {
         body: JSON.stringify({ jobId, tier: 'upgrade' }),
       })
       const data = await res.json() as { url?: string }
-      if (data.url) window.location.href = data.url
+      if (data.url) window.open(data.url, '_blank')
     } finally {
       setPaying(false)
     }
@@ -145,6 +146,8 @@ function ResultContent() {
 
   const isSelectedUnlocked = () => job?.paid === true
 
+  const openLightbox = (style: keyof ImageGroups, idx: number) => setLightbox({ style, idx })
+
   /* ── Loading ── */
   if (loading) {
     return (
@@ -152,12 +155,16 @@ function ResultContent() {
         <div className="text-center max-w-sm mx-auto px-4">
           <div className="w-16 h-16 rounded-full border-2 border-[#C9A96E]/20 border-t-[#C9A96E] animate-spin mx-auto mb-6" />
           <p className="text-[#ECD9A8] text-xl font-bold mb-2">Generating your headshots...</p>
-          <p className="text-[#6E6860] text-sm mb-5">Creating 9 photos across 3 styles</p>
-          <div className="flex justify-center gap-1.5">
-            {[0,1,2,3,4].map(i => (
-              <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${pollCount % 5 === i ? 'bg-[#C9A96E]' : 'bg-white/10'}`} />
-            ))}
+          <p className="text-[#6E6860] text-sm mb-5">AI is creating 9 photos across 3 styles</p>
+
+          {/* Progress bar */}
+          <div className="w-full bg-white/[0.06] rounded-full h-1.5 overflow-hidden mb-3">
+            <div
+              className="progress-gold h-1.5 rounded-full transition-all duration-700"
+              style={{ width: `${Math.round((pollCount / totalCount) * 100)}%` }}
+            />
           </div>
+          <p className="text-[#C9A96E] text-xs font-semibold">{pollCount} / {totalCount} photos ready</p>
         </div>
       </div>
     )
@@ -186,22 +193,95 @@ function ResultContent() {
       {lightbox && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backdropFilter: 'blur(20px)', backgroundColor: 'rgba(0,0,0,0.88)' }}
+          style={{ backdropFilter: 'blur(24px)', backgroundColor: 'rgba(0,0,0,0.9)' }}
           onClick={() => setLightbox(null)}
         >
-          <button className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 text-xl" onClick={() => setLightbox(null)}>✕</button>
-          <div className="flex flex-col items-center gap-4 px-8" onClick={e => e.stopPropagation()}>
-            <div className="relative" style={{ width: 'min(72vw, 340px)', aspectRatio: '1/1' }}>
+          {/* Close */}
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 text-xl transition-colors z-10"
+            onClick={() => setLightbox(null)}
+          >✕</button>
+
+          {/* Prev / Next arrows */}
+          <button
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 text-lg transition-colors z-10"
+            onClick={(e) => {
+              e.stopPropagation()
+              const imgs = job.images[lightbox.style]
+              setLightbox({ style: lightbox.style, idx: (lightbox.idx - 1 + imgs.length) % imgs.length })
+            }}
+          >‹</button>
+          <button
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 text-lg transition-colors z-10"
+            onClick={(e) => {
+              e.stopPropagation()
+              const imgs = job.images[lightbox.style]
+              setLightbox({ style: lightbox.style, idx: (lightbox.idx + 1) % imgs.length })
+            }}
+          >›</button>
+
+          {/* Image + controls */}
+          <div
+            className="flex flex-col items-center gap-4 px-4"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Style label */}
+            <div className="flex items-center gap-2 text-[#C9A96E] text-sm">
+              <span>{STYLES.find(s => s.key === lightbox.style)?.icon}</span>
+              <span className="font-semibold">{STYLES.find(s => s.key === lightbox.style)?.label}</span>
+              <span className="text-white/30 text-xs">{lightbox.idx + 1} / {job.images[lightbox.style].length}</span>
+            </div>
+
+            {/* Photo — 3:4 portrait ratio for enlarged view */}
+            <div
+              className="relative shadow-2xl rounded-2xl overflow-hidden"
+              style={{ width: 'min(75vw, 340px)', aspectRatio: '3/4' }}
+            >
               <img
                 src={job.images[lightbox.style][lightbox.idx]}
-                alt="Headshot"
-                className="w-full h-full object-cover rounded-2xl shadow-2xl"
+                alt="Headshot enlarged"
+                className="w-full h-full object-cover object-top"
               />
+              {/* Watermark if locked */}
               {!isPaidFull && !(isPaidBasic && lightbox.idx === selection[lightbox.style]) && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <p className="watermark-text">PROHEADSHOT.AI</p>
                 </div>
               )}
+              {/* Selected ring */}
+              {selection[lightbox.style] === lightbox.idx && (
+                <div className="absolute inset-0 rounded-2xl ring-2 ring-[#C9A96E] pointer-events-none" />
+              )}
+            </div>
+
+            {/* Select button (only if not paid yet) */}
+            {!job.paid && (
+              <button
+                onClick={() => {
+                  setSelection(prev => ({ ...prev, [lightbox.style]: lightbox.idx }))
+                  setLightbox(null)
+                }}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  selection[lightbox.style] === lightbox.idx
+                    ? 'bg-[#C9A96E]/20 text-[#C9A96E] border border-[#C9A96E]/40 cursor-default'
+                    : 'btn-gold text-[#15120A]'
+                }`}
+              >
+                {selection[lightbox.style] === lightbox.idx ? '★ Currently selected' : 'Use this photo'}
+              </button>
+            )}
+
+            {/* Dot indicators */}
+            <div className="flex gap-1.5">
+              {job.images[lightbox.style].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightbox({ style: lightbox.style, idx: i })}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    i === lightbox.idx ? 'bg-[#C9A96E] w-4' : 'bg-white/25 hover:bg-white/40'
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -264,18 +344,12 @@ function ResultContent() {
                     return (
                       <div
                         key={idx}
-                        className={`relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
+                        className={`relative rounded-xl overflow-hidden cursor-zoom-in transition-all duration-200 ${
                           isSelected
                             ? 'ring-2 ring-[#C9A96E] shadow-[0_0_20px_rgba(201,169,110,0.3)]'
-                            : 'ring-1 ring-white/[0.07] opacity-60 hover:opacity-80'
+                            : 'ring-1 ring-white/[0.07] opacity-60 hover:opacity-90 hover:ring-white/20'
                         }`}
-                        onClick={() => {
-                          if (!job.paid) {
-                            setSelection(prev => ({ ...prev, [style.key]: idx }))
-                          } else {
-                            setLightbox({ style: style.key, idx })
-                          }
-                        }}
+                        onClick={() => openLightbox(style.key, idx)}
                       >
                         <img
                           src={img}
@@ -288,10 +362,16 @@ function ResultContent() {
                             <p className="watermark-text" style={{ fontSize: '7px' }}>PROHEADSHOT.AI</p>
                           </div>
                         )}
+                        {/* Zoom hint on hover */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="bg-black/50 rounded-full w-8 h-8 flex items-center justify-center text-white/80 text-sm">
+                            🔍
+                          </div>
+                        </div>
                         {/* Selected badge */}
-                        {isSelected && !job.paid && (
+                        {isSelected && (
                           <div className="absolute top-1.5 left-1.5 bg-[#C9A96E] text-[#15120A] text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                            ★ Selected
+                            ★ {job.paid ? 'Best' : 'Selected'}
                           </div>
                         )}
                         {/* Unlocked badge */}
@@ -309,10 +389,10 @@ function ResultContent() {
                   })}
                 </div>
 
-                {/* Switch hint */}
+                {/* Click hint */}
                 {!job.paid && (
                   <p className="text-[#6E6860] text-[11px] mt-2 text-center">
-                    Tap any photo to switch your selection
+                    Click any photo to enlarge · Select your favourite in the preview
                   </p>
                 )}
               </div>
@@ -354,7 +434,7 @@ function ResultContent() {
                 >
                   {paying ? 'Processing...' : 'Unlock remaining 6 photos — $5'}
                 </button>
-                <p className="text-[#6E6860] text-xs">Get all your photos with one click · Secure checkout via PayPal</p>
+                <p className="text-[#6E6860] text-xs">🔒 Secure checkout · PayPal protected · One-time payment</p>
               </div>
             ) : (
               /* ── Main pricing (not paid yet) ── */
@@ -429,6 +509,13 @@ function ResultContent() {
                 <p className="text-[#6E6860] text-xs text-center">
                   One-time payment · No subscription · Secure checkout via PayPal
                 </p>
+
+                {/* Trust badges */}
+                <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-white/[0.05]">
+                  {['🔒 Secure checkout', '💳 PayPal protected', '↩ Instant refund if not satisfied'].map((t, i) => (
+                    <span key={i} className="text-[#6E6860] text-[11px] flex items-center gap-1">{t}</span>
+                  ))}
+                </div>
 
                 <div className="flex justify-center mt-5">
                   <button onClick={() => router.push('/')} className="text-[#6E6860] hover:text-[#C9A96E] text-sm transition-colors">

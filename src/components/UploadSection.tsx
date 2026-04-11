@@ -10,6 +10,7 @@ export default function UploadSection() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
+  const [gender, setGender] = useState<'male' | 'female'>('male')
 
   const validateAndAddFiles = useCallback((newFiles: File[]) => {
     const valid: File[] = []
@@ -26,7 +27,7 @@ export default function UploadSection() {
     }
     setError(null)
     setFiles(prev => {
-      const combined = [...prev, ...valid].slice(0, 5) // max 5 photos
+      const combined = [...prev, ...valid].slice(0, 5)
       setPreviews(combined.map(f => URL.createObjectURL(f)))
       return combined
     })
@@ -60,7 +61,8 @@ export default function UploadSection() {
     try {
       const formData = new FormData()
       files.forEach(f => formData.append('photos', f))
-      formData.append('photo', files[0]) // primary photo for backward compat
+      formData.append('photo', files[0])
+      formData.append('gender', gender)
 
       setProgress(30)
       const res = await fetch('/api/generate', { method: 'POST', body: formData })
@@ -81,6 +83,25 @@ export default function UploadSection() {
   return (
     <div className="max-w-lg mx-auto">
 
+      {/* Gender Selector */}
+      <div className="mb-5 flex items-center justify-center gap-3">
+        <span className="text-[#6E6860] text-sm">I am:</span>
+        {(['male', 'female'] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setGender(g)}
+            className={`px-5 py-2 rounded-xl text-sm font-semibold border transition-all duration-150 ${
+              gender === g
+                ? 'bg-[#C9A96E]/20 border-[#C9A96E]/60 text-[#C9A96E]'
+                : 'bg-[#181610] border-white/10 text-[#6E6860] hover:border-[#C9A96E]/30 hover:text-[#B8B0A2]'
+            }`}
+          >
+            {g === 'male' ? '👨 Male' : '👩 Female'}
+          </button>
+        ))}
+      </div>
+
       {/* Drop Zone */}
       <div
         onDrop={handleDrop}
@@ -97,7 +118,6 @@ export default function UploadSection() {
         >
           {previews.length > 0 ? (
             <div className="text-center">
-              {/* Photo thumbnails */}
               <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
                 {previews.map((src, i) => (
                   <div key={i} className="relative">
