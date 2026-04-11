@@ -4,22 +4,22 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const FAL_MODEL = 'fal-ai/pulid'
+const FAL_MODEL = 'fal-ai/flux-pro/kontext'
 
-// ── Style prompts — gender-aware, matched to homepage reference photos ──
+// ── Style prompts (Kontext instruction-style: edit the photo, preserve the face) ──
 // Male prompts
 const STYLES_MALE = {
   professional: {
     label: 'Professional',
-    prompt: 'professional business headshot of a man, half body portrait from waist up, blurred modern office glass interior background with soft bokeh, wearing blazer in gray or navy blue tones without tie over light dress shirt, fabric has natural texture without excessive wrinkles, uniform skin tone across face and neck, warm soft lighting, friendly natural smile, relaxed expression, subtle micro expression, realistic skin texture, candid feeling, approachable and confident, natural balanced posture, photorealistic photography Canon 85mm f/1.4 shallow depth of field',
+    prompt: 'Transform this photo into a professional business headshot. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a modern office interior with blurred glass windows and soft warm bokeh. Dress the person in a well-fitted blazer in charcoal gray or navy blue tone without a tie, over a crisp light dress shirt — fabric should look refined and smooth with no excessive wrinkles. Adjust the lighting to warm soft ambient light. The expression should be a friendly natural smile, relaxed and approachable. Maintain uniform skin tone across face and neck. Crop to half body from waist up, natural balanced posture. Photorealistic quality, Canon 85mm f/1.4 shallow depth of field.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'formal resume headshot of a man, head and upper chest framing, clean pure white studio seamless background, wearing formal well-tailored suit in charcoal gray or navy blue with crisp dress shirt and coordinated patterned tie in complementary color, fabric has refined luxurious texture without excessive creases, uniform skin tone across face and neck, neutral but natural expression with slight micro expression, even soft studio lighting, symmetrical face, minimal polished style, professional and calm, realistic skin texture, sharp photorealistic photography Nikon 85mm',
+    prompt: 'Transform this photo into a formal resume headshot. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a clean pure white seamless studio backdrop. Dress the person in a well-tailored formal suit in charcoal gray or navy blue with a crisp dress shirt and a coordinated patterned tie in a complementary color — fabric should look luxurious and smooth. Adjust the lighting to even soft studio light. The expression should be neutral, calm, and natural with a slight micro expression. Crop to head and upper chest. Symmetrical and polished look. Photorealistic quality, Nikon 85mm.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'corporate executive portrait of a man, half body portrait from waist up, blurred modern corporate indoor lobby or conference room background with cinematic lighting, wearing premium suit in dark charcoal gray or deep navy with crisp dress shirt and elegant patterned tie in coordinated matching color, fabric has luxurious refined texture without excessive wrinkles, uniform skin tone across face and neck, confident but relaxed smile, cinematic directional lighting, high-end professional look, natural posture, subtle expression, realistic face, photorealistic photography Sony 85mm GM f/1.4',
+    prompt: 'Transform this photo into a corporate executive portrait. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a blurred modern corporate indoor lobby or executive conference room with cinematic directional lighting. Dress the person in a premium dark charcoal or deep navy suit with a crisp dress shirt and an elegant patterned tie in a coordinated matching color — fabric should look high-end and refined with no wrinkles. The expression should be confident but relaxed with a subtle smile. Crop to half body from waist up, natural posture. Cinematic high-end professional look. Photorealistic quality, Sony 85mm GM f/1.4.',
   },
 }
 
@@ -27,22 +27,20 @@ const STYLES_MALE = {
 const STYLES_FEMALE = {
   professional: {
     label: 'Professional',
-    prompt: 'professional business headshot of a woman, half body portrait from waist up, blurred modern office glass interior background with soft bokeh, wearing elegant blouse or refined innerwear such as ruffled collar blouse in soft colors not dark navy or black blazer, fabric has natural texture without excessive wrinkles, uniform skin tone across face and neck, natural professional makeup with soft shaped eyebrows light eyeshadow subtle eyeliner defined lashes and natural lipstick, small elegant earrings, refined polished hairstyle, warm soft lighting, friendly natural smile, relaxed expression, subtle micro expression, realistic skin texture, approachable and confident, natural balanced head-to-body proportion, photorealistic photography Canon 85mm f/1.4 shallow depth of field',
+    prompt: 'Transform this photo into a professional business headshot. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a modern office interior with blurred glass windows and soft warm bokeh. Dress the person in an elegant blouse or refined top in soft neutral colors — not dark navy or black blazer — fabric smooth and polished. Apply natural professional makeup: softly shaped eyebrows, light eyeshadow, subtle eyeliner, defined lashes, natural lipstick. Add small elegant earrings. Style the hair in a refined polished professional look. Adjust the lighting to warm soft ambient light. The expression should be a friendly natural smile, relaxed and approachable. Maintain uniform skin tone across face and neck. Crop to half body from waist up. Photorealistic quality, Canon 85mm f/1.4.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'formal resume headshot of a woman, head and upper chest framing, clean pure white studio seamless background, wearing elegant blouse or refined top in neutral soft colors, minimal polished look, uniform skin tone across face and neck, natural professional makeup with light clean style shaped eyebrows soft eyeshadow defined lashes natural lipstick, subtle earrings, neat refined polished hairstyle, neutral but natural expression with slight micro expression, even soft studio lighting, professional and calm, realistic skin texture, natural balanced head-to-body proportion, sharp photorealistic photography Nikon 85mm',
+    prompt: 'Transform this photo into a formal resume headshot. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a clean pure white seamless studio backdrop. Dress the person in an elegant blouse or refined top in neutral soft colors — minimal and polished. Apply light clean natural professional makeup: shaped eyebrows, soft eyeshadow, defined lashes, natural lipstick. Add subtle earrings. Style the hair in a neat refined polished look. Adjust the lighting to even soft studio light. The expression should be neutral and calm with a slight natural micro expression. Crop to head and upper chest. Professional and elegant. Photorealistic quality, Nikon 85mm.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'corporate executive portrait of a woman, half body portrait from waist up, blurred modern corporate indoor lobby or executive office background with cinematic lighting, wearing elegant business outfit with refined blouse in refined colors not dark navy or black suit, optional subtle necklace, uniform skin tone across face and neck, natural professional makeup with polished and refined style shaped eyebrows defined eyeshadow eyeliner elegant lashes and lipstick, elegant earrings, styled professional polished hairstyle, confident but relaxed expression, cinematic directional lighting, high-end professional look, natural posture, subtle expression, realistic face, natural balanced head-to-body proportion, photorealistic photography Sony 85mm GM f/1.4',
+    prompt: 'Transform this photo into a corporate executive portrait. Keep the person\'s face, identity, and skin tone exactly the same. Change the background to a blurred modern corporate indoor lobby or executive office with cinematic directional lighting. Dress the person in an elegant business outfit with a refined blouse in polished colors — not dark navy or black suit. Optionally add a subtle necklace. Apply polished professional makeup: shaped eyebrows, defined eyeshadow, eyeliner, elegant lashes, refined lipstick. Add elegant earrings. Style the hair in a professional polished updo or styled look. The expression should be confident but relaxed. Crop to half body from waist up. Cinematic high-end professional look. Photorealistic quality, Sony 85mm GM f/1.4.',
   },
 }
 
-// Default unified prompts (gender-neutral fallback combining both)
+// Default unified prompts (gender-neutral fallback)
 const STYLES = STYLES_MALE
-
-const NEGATIVE_PROMPT = 'extreme close-up, face filling frame, big head doll, oversized head, disproportionate head too large, no body visible, full body legs visible, cartoon, anime, illustration, blurry face, bad anatomy, asymmetric eyes, deformed, ugly, watermark, text, nsfw, messy hair, disheveled, fly-away hair strands, harsh lighting, flat lighting, stiff unnatural expression, blank eyes, emotionless, fake face, plastic skin, over-retouched, distorted face, extra fingers, overposed, heavy makeup, exaggerated makeup, overdone lipstick, dramatic eyeliner, unnatural accessories, oversized jewelry, mismatched skin tone between face and neck, uneven skin color, collar wrinkles, excessive fabric creases, cheap looking suit, wrinkled shirt'
 
 const SEEDS = [42, 1337, 7777]
 
@@ -87,13 +85,13 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      reference_images: [{ image_url: faceImageUrl }],
+      image_url: faceImageUrl,
       prompt: styleMap[style].prompt,
-      negative_prompt: NEGATIVE_PROMPT,
-      num_inference_steps: 12,
-      guidance_scale: 5.5,
-      image_size: { width: 768, height: 1024 },  // 3:4 portrait ratio
+      guidance_scale: 3.5,
+      num_inference_steps: 28,
       seed,
+      output_format: 'jpeg',
+      safety_tolerance: '2',
     }),
   })
 
