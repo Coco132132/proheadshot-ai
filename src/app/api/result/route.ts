@@ -4,7 +4,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const FAL_MODEL = 'fal-ai/pulid'
+const FAL_MODEL = 'fal-ai/flux-pro/kontext'
 
 interface FalRequest {
   style: 'professional' | 'clean' | 'corporate'
@@ -40,27 +40,22 @@ async function checkRequest(requestId: string): Promise<{ done: boolean; imageUr
 
   const data = await res.json() as {
     status?: string
-    images?: { url: string }[]     // pulid returns 'images' array
+    images?: { url: string }[]
     image?: { url: string }
     output?: { images?: { url: string }[] }
   }
 
-  // pulid: completed when 'images' array is present (no status field)
-  if (data.images && data.images.length > 0) {
-    return { done: true, imageUrl: data.images[0].url }
-  }
-
-  // Other models: check status field
+  // Kontext / flux-pro: status=COMPLETED with images array
   if (data.status === 'COMPLETED') {
-    const imageUrl = data.image?.url || data.output?.images?.[0]?.url
+    const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url
     return { done: true, imageUrl }
   }
 
-  if (data.status === 'FAILED') {
+  if (data.status === 'FAILED' || data.status === 'ERROR') {
     return { done: true, imageUrl: undefined }
   }
 
-  // Still running
+  // Still in queue or processing
   return { done: false }
 }
 
