@@ -91,7 +91,7 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
       prompt: styleMap[style].prompt,
       negative_prompt: NEGATIVE_PROMPT,
       num_inference_steps: 12,
-      guidance_scale: 1.5,
+      guidance_scale: 5.5,
       image_size: { width: 768, height: 1024 },  // 3:4 portrait ratio
       seed,
     }),
