@@ -4,7 +4,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const FAL_MODEL = 'fal-ai/flux/dev/image-to-image'
+const FAL_MODEL = 'fal-ai/instantid'
 const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 
 // ── Style prompts (Kontext instruction-style: edit the photo, preserve the face) ──
@@ -12,15 +12,15 @@ const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 const STYLES_MALE = {
   professional: {
     label: 'Professional',
-    prompt: 'Create a new professional business headshot from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any wall, room, furniture, home interior, outdoor scenery, or any elements from the source photo. Replace the original clothing entirely with a clean, well-fitted charcoal gray or navy blazer over a crisp light dress shirt, no tie. This must look like a newly photographed professional portrait, not the original casual photo. Use a modern office background with soft blurred glass and warm subtle bokeh. Use soft flattering studio lighting, natural skin texture, matte hair texture, clean grooming, and realistic fabric detail. Avoid oily hair shine, wet look hair, over-sharpening, harsh skin smoothing, excessive contrast, and phone selfie look. Friendly natural smile, relaxed and approachable. Half body crop from waist up, balanced posture. Photorealistic, premium but natural, shallow depth of field, Canon 85mm f/1.4.',
+    prompt: 'A realistic premium business headshot of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a tailored charcoal gray or navy blazer over a crisp light dress shirt with no tie. Professional studio/business portrait, modern office background with soft blurred glass and subtle warm bokeh, soft flattering studio lighting, natural skin texture, matte natural hair texture, clean grooming, realistic fabric detail, approachable confident expression, half body crop from waist up, sharp eyes, premium LinkedIn headshot, photorealistic.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'Create a new formal resume headshot from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any part of the source environment. Replace the original clothing entirely with a refined charcoal gray or navy formal suit, crisp dress shirt, and tasteful coordinated tie. This must look like a freshly shot studio resume portrait, not an edited selfie. Use a pure white seamless studio background with even soft studio light. Keep skin realistic and natural, hair matte and tidy, with no oily shine, no wet hair look, no oversharpened strands, no harsh retouching, and no exaggerated facial contrast. Neutral calm expression with a slight natural micro-expression. Head and upper chest crop. Symmetrical, polished, premium, realistic Nikon 85mm studio portrait.',
+    prompt: 'A realistic formal resume headshot of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a refined charcoal gray or navy formal suit, crisp dress shirt, and tasteful tie. Pure white seamless studio background, soft even studio lighting, clean symmetrical composition, natural skin texture, matte tidy hair, realistic professional portrait, head and upper chest crop, photorealistic resume photo.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'Create a new high-end corporate executive portrait from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any original room, wall, decoration, or casual setting. Replace the original clothing entirely with a premium dark charcoal or deep navy executive suit, crisp dress shirt, and elegant coordinated tie. This must look like a newly shot corporate campaign portrait, not the original photo. Use a blurred upscale corporate lobby or executive conference space background with cinematic but soft directional lighting. Keep skin texture natural, hair texture matte and realistic, with no oily shine, no wet look, no oversharpening, no crunchy hair detail, and no heavy beauty retouching. Confident but relaxed expression with a subtle smile. Half body crop from waist up. High-end, realistic, polished, Sony 85mm GM portrait.',
+    prompt: 'A realistic executive corporate portrait of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a premium dark charcoal or deep navy executive suit, crisp shirt, elegant tie. Upscale corporate lobby or executive office background with soft cinematic blur, polished but natural studio lighting, realistic skin texture, matte natural hair, confident relaxed expression, premium executive headshot, half body crop, photorealistic.',
   },
 }
 
@@ -28,15 +28,15 @@ const STYLES_MALE = {
 const STYLES_FEMALE = {
   professional: {
     label: 'Professional',
-    prompt: 'Create a new professional business headshot from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any wall, room, furniture, home interior, outdoor scenery, or source-photo elements. Replace the original clothing entirely with an elegant refined blouse or polished professional top in soft neutral tones, not a casual outfit and not the original clothing. This must look like a newly photographed professional portrait, not an edited selfie. Use a modern office background with softly blurred glass and warm subtle bokeh. Apply soft flattering studio lighting, realistic skin texture, matte natural hair texture, clean grooming, subtle polished makeup, and delicate elegant accessories only if natural. Avoid oily hair shine, wet look hair, crunchy sharp strands, oversharpening, harsh beauty retouching, excessive contrast, and phone selfie look. Friendly natural smile, relaxed and approachable. Half body crop from waist up. Premium, realistic, natural Canon 85mm portrait.',
+    prompt: 'A realistic premium business headshot of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant refined blouse or polished professional top in soft neutral tones. Professional studio/business portrait, modern office background with soft blurred glass and subtle warm bokeh, flattering studio lighting, natural skin texture, matte natural hair, subtle polished makeup, approachable confident expression, half body crop from waist up, premium LinkedIn headshot, photorealistic.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'Create a new formal resume headshot from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any part of the source environment. Replace the original clothing entirely with an elegant refined blouse or polished studio-ready professional top in clean neutral tones. This must look like a freshly shot studio resume portrait, not the original casual photo. Use a pure white seamless studio backdrop with even soft studio light. Keep skin natural and realistic, hair matte and tidy, makeup subtle and polished, with no oily shine, no wet hair look, no oversharpened hair detail, no aggressive smoothing, and no over-processed glamour effect. Neutral calm expression with a slight natural micro-expression. Head and upper chest crop. Clean, symmetrical, premium, realistic Nikon 85mm studio portrait.',
+    prompt: 'A realistic formal resume headshot of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant refined blouse or polished studio-ready professional top in neutral tones. Pure white seamless studio background, soft even studio lighting, natural skin texture, matte tidy hair, subtle polished makeup, clean symmetrical composition, head and upper chest crop, photorealistic professional resume photo.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'Create a new high-end corporate executive portrait from this person. Preserve only the person\'s face identity, facial structure, skin tone, and overall likeness. Completely remove the original background and do not keep any original room, wall, decoration, or casual setting. Replace the original clothing entirely with an elegant business outfit or refined blouse in polished professional tones, not the original clothing and not casual wear. This must look like a newly shot corporate campaign portrait, not an edited phone photo. Use a blurred upscale corporate lobby or executive office setting with cinematic but soft directional lighting. Keep skin texture natural, hair texture matte and realistic, makeup polished but restrained, with no oily shine, no wet look, no oversharpening, no crunchy hair detail, and no heavy beauty retouching. Confident but relaxed expression. Half body crop from waist up. High-end, realistic, polished Sony 85mm portrait.',
+    prompt: 'A realistic executive corporate portrait of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant business outfit or refined blouse in polished professional tones. Upscale corporate lobby or executive office background with soft cinematic blur, polished but natural lighting, realistic skin texture, matte natural hair, subtle refined makeup, confident relaxed expression, premium executive headshot, half body crop, photorealistic.',
   },
 }
 
@@ -49,13 +49,14 @@ interface DebugSubmitLog {
   style: keyof typeof STYLES
   seed: number
   endpoint: string
-  apiType: 'image-to-image'
+  apiType: 'identity-to-image'
   model: string
   prompt: string
   imageUrl: string
-  strength: number
   guidanceScale: number
   numInferenceSteps: number
+  identityStrength: number
+  ipAdapterScale: number
   requestId?: string
   error?: string
 }
@@ -95,36 +96,41 @@ async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileNam
 async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<{ requestId: string; debug: DebugSubmitLog }> {
   const styleMap = gender === 'female' ? STYLES_FEMALE : STYLES_MALE
   const prompt = styleMap[style].prompt
-  const strength = 0.9
-  const guidanceScale = 7
-  const numInferenceSteps = 40
+  const guidanceScale = 1.8
+  const numInferenceSteps = 8
+  const identityStrength = 0.95
+  const ipAdapterScale = 0.9
   const payload = {
-    image_url: faceImageUrl,
+    face_image_url: faceImageUrl,
     prompt,
-    strength,
-    guidance_scale: guidanceScale,
+    style: 'Headshot',
+    negative_prompt: 'lowres, blurry, bad anatomy, deformed face, different person, different identity, cartoon, illustration, painting, extra fingers, duplicate face, ugly, distorted features, oversmoothed skin, oily hair, wet hair, harsh sharpening, casual clothing, selfie, phone photo, low quality',
     num_inference_steps: numInferenceSteps,
+    guidance_scale: guidanceScale,
+    controlnet_selection: 'pose',
+    controlnet_conditioning_scale: 0.5,
+    ip_adapter_scale: ipAdapterScale,
+    identity_controlnet_conditioning_scale: identityStrength,
+    enhance_face_region: true,
     seed,
-    num_images: 1,
-    enable_safety_checker: true,
-    output_format: 'jpeg',
-    acceleration: 'none',
+    enable_lcm: true,
   }
 
   const debugBase: DebugSubmitLog = {
     style,
     seed,
     endpoint: FAL_SUBMIT_URL,
-    apiType: 'image-to-image',
+    apiType: 'identity-to-image',
     model: FAL_MODEL,
     prompt,
     imageUrl: faceImageUrl,
-    strength,
     guidanceScale,
     numInferenceSteps,
+    identityStrength,
+    ipAdapterScale,
   }
 
-  console.log('[generate] submitting image-to-image request', JSON.stringify(debugBase))
+  console.log('[generate] submitting instantid request', JSON.stringify(debugBase))
 
   const res = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
@@ -180,7 +186,7 @@ export async function POST(request: NextRequest) {
     const ext = primaryPhoto.type.includes('png') ? 'png' : 'jpg'
     const faceImageUrl = await uploadToFal(buf, primaryPhoto.type, `face-${jobId}.${ext}`)
 
-    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'image-to-image', strategy: 'strong-transform' }))
+    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'identity-to-image', strategy: 'identity-priority' }))
 
     // Submit 9 jobs in parallel (3 styles × 3 seeds)
     const styleKeys = Object.keys(STYLES) as (keyof typeof STYLES)[]
@@ -207,9 +213,9 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       model: FAL_MODEL,
       submitUrl: FAL_SUBMIT_URL,
-      pollBase: 'fal-ai/flux',
-      apiType: 'image-to-image',
-      inputKind: 'image_url',
+      pollBase: FAL_MODEL,
+      apiType: 'identity-to-image',
+      inputKind: 'face_image_url',
       faceImageUrl,
       requests,
       images: null,
@@ -223,9 +229,9 @@ export async function POST(request: NextRequest) {
         generatedAt: new Date(now).toISOString(),
         model: FAL_MODEL,
         submitUrl: FAL_SUBMIT_URL,
-        pollBase: 'fal-ai/flux',
-        apiType: 'image-to-image',
-        inputKind: 'image_url',
+        pollBase: FAL_MODEL,
+        apiType: 'identity-to-image',
+        inputKind: 'face_image_url',
         uploadedFaceImageUrl: faceImageUrl,
         fileCount: allPhotos.length,
         gender,

@@ -4,7 +4,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const DEFAULT_FAL_POLL_BASE = 'fal-ai/flux'
+const DEFAULT_FAL_POLL_BASE = 'fal-ai/instantid'
 
 interface FalRequest {
   style: 'professional' | 'clean' | 'corporate'
