@@ -12,6 +12,9 @@ interface FalRequest {
   requestId: string
   done: boolean
   imageUrl?: string
+  status?: string
+  error?: string
+  lastCheckedAt?: number
 }
 
 interface JobData {
@@ -28,47 +31,64 @@ interface JobData {
   paid: boolean
   paidTier: 'basic' | 'full' | null
   createdAt: number
+  updatedAt?: number
+  debug?: {
+    pollLogs?: Array<Record<string, unknown>>
+    returnedImageUrls?: string[]
+    [key: string]: unknown
+  }
   error?: string
 }
 
 // ── Check one fal.ai queue request ──
 // Kontext submits to fal-ai/flux-pro/kontext but polls via fal-ai/flux-pro
-async function checkRequest(requestId: string, pollBase: string): Promise<{ done: boolean; imageUrl?: string }> {
-  // Step 1: check status
+async function checkRequest(requestId: string, pollBase: string): Promise<{ done: boolean; imageUrl?: string; status?: string; error?: string; raw?: unknown }> {
   const statusRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}/status`, {
     headers: { 'Authorization': `Key ${FAL_KEY}` },
   })
-  if (!statusRes.ok) return { done: false }
 
-  const statusData = await statusRes.json() as { status?: string }
-
-  if (statusData.status === 'FAILED' || statusData.status === 'ERROR') {
-    return { done: true, imageUrl: undefined }
+  if (!statusRes.ok) {
+    const errText = await statusRes.text()
+    return { done: false, status: 'STATUS_HTTP_ERROR', error: `status ${statusRes.status}: ${errText.slice(0, 300)}` }
   }
 
-  if (statusData.status !== 'COMPLETED') {
-    return { done: false }
+  const statusData = await statusRes.json() as { status?: string; logs?: unknown; [key: string]: unknown }
+  const currentStatus = statusData.status || 'UNKNOWN'
+
+  if (currentStatus === 'FAILED' || currentStatus === 'ERROR') {
+    return { done: true, status: currentStatus, error: JSON.stringify(statusData).slice(0, 500), raw: statusData }
   }
 
-  // Step 2: fetch actual output
+  if (currentStatus !== 'COMPLETED') {
+    return { done: false, status: currentStatus, raw: statusData }
+  }
+
   const outputRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}`, {
     headers: { 'Authorization': `Key ${FAL_KEY}` },
   })
-  if (!outputRes.ok) return { done: true, imageUrl: undefined }
+
+  if (!outputRes.ok) {
+    const errText = await outputRes.text()
+    return { done: true, status: 'RESULT_HTTP_ERROR', error: `result ${outputRes.status}: ${errText.slice(0, 300)}` }
+  }
 
   const data = await outputRes.json() as {
     images?: { url: string }[]
     image?: { url: string }
     output?: { images?: { url: string }[]; image?: { url: string } }
     detail?: unknown
-  }
-
-  if (data.detail) {
-    return { done: true, imageUrl: undefined }
+    error?: unknown
+    [key: string]: unknown
   }
 
   const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url || data.output?.image?.url
-  return { done: true, imageUrl }
+
+  if (imageUrl) {
+    return { done: true, status: currentStatus, imageUrl, raw: data }
+  }
+
+  const apiError = data.detail || data.error || data
+  return { done: true, status: 'COMPLETED_NO_IMAGE', error: JSON.stringify(apiError).slice(0, 500), raw: data }
 }
 
 export async function GET(request: NextRequest) {
@@ -107,18 +127,46 @@ export async function GET(request: NextRequest) {
           })
         )
 
-        // Update requests with results
+        if (!job.debug) job.debug = {}
+        if (!job.debug.pollLogs) job.debug.pollLogs = []
+        if (!job.debug.returnedImageUrls) job.debug.returnedImageUrls = []
+
         for (const check of checks) {
           const req = job.requests.find(r => r.requestId === check.requestId)
-          if (req && check.done) {
+          if (!req) continue
+
+          req.status = check.status
+          req.lastCheckedAt = Date.now()
+          if (check.error) req.error = check.error
+
+          job.debug.pollLogs.push({
+            at: new Date().toISOString(),
+            requestId: check.requestId,
+            status: check.status,
+            error: check.error,
+          })
+
+          if (check.done) {
             req.done = true
-            if (check.imageUrl) req.imageUrl = check.imageUrl
+            if (check.imageUrl) {
+              req.imageUrl = check.imageUrl
+              job.debug.returnedImageUrls.push(check.imageUrl)
+            }
           }
         }
       }
 
-      // Check if all done
       const allDone = job.requests.every(r => r.done)
+      const doneCount = job.requests.filter(r => r.done).length
+      const failedCount = job.requests.filter(r => r.done && !r.imageUrl).length
+
+      if (doneCount === 0 && Date.now() - job.createdAt > 2 * 60 * 1000) {
+        job.status = 'error'
+        job.error = 'Generation did not start successfully. Please try again.'
+        job.updatedAt = Date.now()
+        await kv.put(jobId, JSON.stringify(job), { expirationTtl: 86400 })
+        return NextResponse.json(job)
+      }
 
       if (allDone) {
         // Organize into style groups (3 per style, ordered by seed)
