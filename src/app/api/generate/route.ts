@@ -5,6 +5,7 @@ export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
 const FAL_MODEL = 'fal-ai/flux-pro/kontext'
+const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 
 // ── Style prompts (Kontext instruction-style: edit the photo, preserve the face) ──
 // Male prompts
@@ -44,6 +45,18 @@ const STYLES = STYLES_MALE
 
 const SEEDS = [42, 1337, 7777]
 
+interface DebugSubmitLog {
+  style: keyof typeof STYLES
+  seed: number
+  endpoint: string
+  apiType: 'image-to-image'
+  model: string
+  prompt: string
+  imageUrl: string
+  requestId?: string
+  error?: string
+}
+
 // ── Upload photo to fal.ai storage → returns hosted URL ──
 async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileName: string): Promise<string> {
   // Step 1: get upload URL
@@ -76,32 +89,50 @@ async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileNam
 }
 
 // ── Submit one async job to fal.ai queue ──
-async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<string> {
+async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<{ requestId: string; debug: DebugSubmitLog }> {
   const styleMap = gender === 'female' ? STYLES_FEMALE : STYLES_MALE
-  const res = await fetch(`https://queue.fal.run/${FAL_MODEL}`, {
+  const prompt = styleMap[style].prompt
+  const payload = {
+    image_url: faceImageUrl,
+    prompt,
+    guidance_scale: 3.5,
+    num_inference_steps: 28,
+    seed,
+    output_format: 'jpeg',
+    safety_tolerance: '2',
+  }
+
+  const debugBase: DebugSubmitLog = {
+    style,
+    seed,
+    endpoint: FAL_SUBMIT_URL,
+    apiType: 'image-to-image',
+    model: FAL_MODEL,
+    prompt,
+    imageUrl: faceImageUrl,
+  }
+
+  console.log('[generate] submitting kontext request', JSON.stringify(debugBase))
+
+  const res = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${FAL_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      image_url: faceImageUrl,
-      prompt: styleMap[style].prompt,
-      guidance_scale: 3.5,
-      num_inference_steps: 28,
-      seed,
-      output_format: 'jpeg',
-      safety_tolerance: '2',
-    }),
+    body: JSON.stringify(payload),
   })
 
   if (!res.ok) {
     const err = await res.text()
+    console.error('[generate] fal queue submit failed', JSON.stringify({ ...debugBase, error: err }))
     throw new Error(`fal queue submit failed: ${err}`)
   }
 
   const data = await res.json() as { request_id: string }
-  return data.request_id
+  const debug = { ...debugBase, requestId: data.request_id }
+  console.log('[generate] fal request accepted', JSON.stringify(debug))
+  return { requestId: data.request_id, debug }
 }
 
 export async function POST(request: NextRequest) {
@@ -137,13 +168,15 @@ export async function POST(request: NextRequest) {
     const ext = primaryPhoto.type.includes('png') ? 'png' : 'jpg'
     const faceImageUrl = await uploadToFal(buf, primaryPhoto.type, `face-${jobId}.${ext}`)
 
+    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'image-to-image' }))
+
     // Submit 9 jobs in parallel (3 styles × 3 seeds)
     const styleKeys = Object.keys(STYLES) as (keyof typeof STYLES)[]
     const jobEntries = styleKeys.flatMap(style =>
       SEEDS.map(seed => ({ style, seed }))
     )
 
-    const requestIds = await Promise.all(
+    const submitted = await Promise.all(
       jobEntries.map(({ style, seed }) => submitJob(faceImageUrl, style, seed, gender))
     )
 
@@ -151,20 +184,43 @@ export async function POST(request: NextRequest) {
     const requests = jobEntries.map((entry, i) => ({
       style: entry.style,
       seed: entry.seed,
-      requestId: requestIds[i],
+      requestId: submitted[i].requestId,
       done: false,
     }))
 
     // Store pending job in KV
+    const now = Date.now()
     const jobData = {
+      jobId,
       status: 'pending',
+      model: FAL_MODEL,
+      submitUrl: FAL_SUBMIT_URL,
+      apiType: 'image-to-image',
+      inputKind: 'image_url',
       faceImageUrl,
       requests,
       images: null,
       selection: { professional: 0, clean: 0, corporate: 0 },
       paid: false,
       paidTier: null,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
+      cacheBust: now,
+      debug: {
+        generatedAt: new Date(now).toISOString(),
+        model: FAL_MODEL,
+        submitUrl: FAL_SUBMIT_URL,
+        pollBase: 'fal-ai/flux-pro',
+        apiType: 'image-to-image',
+        inputKind: 'image_url',
+        uploadedFaceImageUrl: faceImageUrl,
+        fileCount: allPhotos.length,
+        gender,
+        prompts: Object.fromEntries(submitted.map(({ debug }) => [`${debug.style}-${debug.seed}`, debug.prompt])),
+        submitLogs: submitted.map(({ debug }) => debug),
+        pollLogs: [],
+        returnedImageUrls: [],
+      },
     }
 
     await kv.put(jobId, JSON.stringify(jobData), { expirationTtl: 86400 })
