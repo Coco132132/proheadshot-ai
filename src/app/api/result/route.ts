@@ -4,8 +4,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-// Kontext is submitted under fal-ai/flux-pro/kontext, but results are polled under fal-ai/flux-pro
-const FAL_POLL_BASE = 'fal-ai/flux-pro'
+const DEFAULT_FAL_POLL_BASE = 'fal-ai/flux/dev/image-to-image'
 
 interface FalRequest {
   style: 'professional' | 'clean' | 'corporate'
@@ -18,6 +17,7 @@ interface FalRequest {
 interface JobData {
   status: 'pending' | 'complete' | 'error'
   faceImageUrl?: string
+  pollBase?: string
   requests?: FalRequest[]
   images?: {
     professional: string[]
@@ -33,9 +33,9 @@ interface JobData {
 
 // ── Check one fal.ai queue request ──
 // Kontext submits to fal-ai/flux-pro/kontext but polls via fal-ai/flux-pro
-async function checkRequest(requestId: string): Promise<{ done: boolean; imageUrl?: string }> {
+async function checkRequest(requestId: string, pollBase: string): Promise<{ done: boolean; imageUrl?: string }> {
   // Step 1: check status
-  const statusRes = await fetch(`https://queue.fal.run/${FAL_POLL_BASE}/requests/${requestId}/status`, {
+  const statusRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}/status`, {
     headers: { 'Authorization': `Key ${FAL_KEY}` },
   })
   if (!statusRes.ok) return { done: false }
@@ -51,7 +51,7 @@ async function checkRequest(requestId: string): Promise<{ done: boolean; imageUr
   }
 
   // Step 2: fetch actual output
-  const outputRes = await fetch(`https://queue.fal.run/${FAL_POLL_BASE}/requests/${requestId}`, {
+  const outputRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}`, {
     headers: { 'Authorization': `Key ${FAL_KEY}` },
   })
   if (!outputRes.ok) return { done: true, imageUrl: undefined }
@@ -59,16 +59,15 @@ async function checkRequest(requestId: string): Promise<{ done: boolean; imageUr
   const data = await outputRes.json() as {
     images?: { url: string }[]
     image?: { url: string }
-    output?: { images?: { url: string }[] }
+    output?: { images?: { url: string }[]; image?: { url: string } }
     detail?: unknown
   }
 
   if (data.detail) {
-    // API returned an error in output
     return { done: true, imageUrl: undefined }
   }
 
-  const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url
+  const imageUrl = data.images?.[0]?.url || data.image?.url || data.output?.images?.[0]?.url || data.output?.image?.url
   return { done: true, imageUrl }
 }
 
@@ -95,6 +94,7 @@ export async function GET(request: NextRequest) {
     // Still pending → poll fal.ai for updates
     if (job.status === 'pending' && job.requests) {
       const pendingRequests = job.requests.filter(r => !r.done)
+      const pollBase = job.pollBase || DEFAULT_FAL_POLL_BASE
 
       if (pendingRequests.length === 0) {
         // All done — shouldn't hit here but handle gracefully
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
         // Check all pending in parallel
         const checks = await Promise.all(
           pendingRequests.map(async (r) => {
-            const result = await checkRequest(r.requestId)
+            const result = await checkRequest(r.requestId, pollBase)
             return { requestId: r.requestId, ...result }
           })
         )

@@ -4,7 +4,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 export const runtime = 'edge'
 
 const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
-const FAL_MODEL = 'fal-ai/flux-pro/kontext'
+const FAL_MODEL = 'fal-ai/flux/dev/image-to-image'
 const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 
 // ── Style prompts (Kontext instruction-style: edit the photo, preserve the face) ──
@@ -53,6 +53,9 @@ interface DebugSubmitLog {
   model: string
   prompt: string
   imageUrl: string
+  strength: number
+  guidanceScale: number
+  numInferenceSteps: number
   requestId?: string
   error?: string
 }
@@ -92,14 +95,22 @@ async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileNam
 async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<{ requestId: string; debug: DebugSubmitLog }> {
   const styleMap = gender === 'female' ? STYLES_FEMALE : STYLES_MALE
   const prompt = styleMap[style].prompt
+  const strength = 0.9
+  const guidanceScale = 7
+  const numInferenceSteps = 40
   const payload = {
     image_url: faceImageUrl,
     prompt,
-    guidance_scale: 6,
-    num_inference_steps: 32,
+    strength,
+    guidance_scale: guidanceScale,
+    num_inference_steps: numInferenceSteps,
     seed,
-    output_format: 'jpeg',
-    safety_tolerance: '2',
+    image_size: {
+      width: 1024,
+      height: 1024,
+    },
+    num_images: 1,
+    enable_safety_checker: true,
   }
 
   const debugBase: DebugSubmitLog = {
@@ -110,9 +121,12 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
     model: FAL_MODEL,
     prompt,
     imageUrl: faceImageUrl,
+    strength,
+    guidanceScale,
+    numInferenceSteps,
   }
 
-  console.log('[generate] submitting kontext request', JSON.stringify(debugBase))
+  console.log('[generate] submitting image-to-image request', JSON.stringify(debugBase))
 
   const res = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
@@ -168,7 +182,7 @@ export async function POST(request: NextRequest) {
     const ext = primaryPhoto.type.includes('png') ? 'png' : 'jpg'
     const faceImageUrl = await uploadToFal(buf, primaryPhoto.type, `face-${jobId}.${ext}`)
 
-    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'image-to-image' }))
+    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'image-to-image', strategy: 'strong-transform' }))
 
     // Submit 9 jobs in parallel (3 styles × 3 seeds)
     const styleKeys = Object.keys(STYLES) as (keyof typeof STYLES)[]
@@ -195,6 +209,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       model: FAL_MODEL,
       submitUrl: FAL_SUBMIT_URL,
+      pollBase: FAL_MODEL,
       apiType: 'image-to-image',
       inputKind: 'image_url',
       faceImageUrl,
@@ -210,7 +225,7 @@ export async function POST(request: NextRequest) {
         generatedAt: new Date(now).toISOString(),
         model: FAL_MODEL,
         submitUrl: FAL_SUBMIT_URL,
-        pollBase: 'fal-ai/flux-pro',
+        pollBase: 'fal-ai/flux/dev/image-to-image',
         apiType: 'image-to-image',
         inputKind: 'image_url',
         uploadedFaceImageUrl: faceImageUrl,
