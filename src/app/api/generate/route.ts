@@ -105,12 +105,10 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
     guidance_scale: guidanceScale,
     num_inference_steps: numInferenceSteps,
     seed,
-    image_size: {
-      width: 1024,
-      height: 1024,
-    },
     num_images: 1,
     enable_safety_checker: true,
+    output_format: 'jpeg',
+    acceleration: 'none',
   }
 
   const debugBase: DebugSubmitLog = {
