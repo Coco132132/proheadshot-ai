@@ -11,30 +11,30 @@ const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 const STYLES_MALE = {
   professional: {
     label: 'Professional',
-    prompt: 'A realistic premium business headshot of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a tailored charcoal gray or navy blazer over a crisp light dress shirt with no tie. Professional studio/business portrait, modern office background with soft blurred glass and subtle warm bokeh, soft flattering studio lighting, natural skin texture, matte natural hair texture, clean grooming, realistic fabric detail, approachable confident expression, half body crop from waist up, sharp eyes, premium LinkedIn headshot, photorealistic.',
+    prompt: 'Create a realistic professional LinkedIn headshot of the same man from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. He is wearing a well-fitted dark navy or charcoal business blazer over a clean light dress shirt, no tie, styled as a polished corporate professional. Chest-up composition, facing camera, centered framing, symmetrical professional portrait, realistic studio photography, clean modern office background with soft blur, soft neutral lighting, clean grooming, natural skin texture, realistic fabric texture, confident approachable expression, premium business headshot, resume-ready, corporate profile photo, photorealistic.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'A realistic formal resume headshot of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a refined charcoal gray or navy formal suit, crisp dress shirt, and tasteful tie. Pure white seamless studio background, soft even studio lighting, clean symmetrical composition, natural skin texture, matte tidy hair, realistic professional portrait, head and upper chest crop, photorealistic resume photo.',
+    prompt: 'Create a realistic formal resume headshot of the same man from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. He is wearing a formal dark navy or charcoal suit, crisp white or light blue dress shirt, and tasteful professional tie. Clean chest-up portrait, facing camera, centered composition, symmetrical studio setup, pure light neutral background, soft even business portrait lighting, realistic skin texture, neat professional appearance, polished corporate look, passport-style framing but premium, resume-ready professional headshot, LinkedIn and CV photo, photorealistic.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'A realistic executive corporate portrait of the same man from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. He is wearing a premium dark charcoal or deep navy executive suit, crisp shirt, elegant tie. Upscale corporate lobby or executive office background with soft cinematic blur, polished but natural studio lighting, realistic skin texture, matte natural hair, confident relaxed expression, premium executive headshot, half body crop, photorealistic.',
+    prompt: 'Create a realistic executive corporate headshot of the same man from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. He is wearing a premium executive suit in deep navy or charcoal, crisp dress shirt, elegant conservative tie, styled for a senior business leader portrait. Chest-up or upper-torso composition, facing camera, refined symmetrical framing, upscale corporate office background with subtle blur, clean premium lighting, sharp eyes, natural skin texture, calm confident executive expression, company website leadership portrait, premium business headshot, photorealistic.',
   },
 }
 
 const STYLES_FEMALE = {
   professional: {
     label: 'Professional',
-    prompt: 'A realistic premium business headshot of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant refined blouse or polished professional top in soft neutral tones. Professional studio/business portrait, modern office background with soft blurred glass and subtle warm bokeh, flattering studio lighting, natural skin texture, matte natural hair, subtle polished makeup, approachable confident expression, half body crop from waist up, premium LinkedIn headshot, photorealistic.',
+    prompt: 'Create a realistic professional LinkedIn headshot of the same woman from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. She is wearing a polished business blouse or structured business blazer in elegant neutral tones, styled as a modern corporate professional. Chest-up composition, facing camera, centered framing, symmetrical professional portrait, realistic studio photography, clean modern office background with soft blur, soft neutral lighting, subtle polished makeup, natural skin texture, confident approachable expression, premium business headshot, resume-ready, corporate profile photo, photorealistic.',
   },
   clean: {
     label: 'Clean',
-    prompt: 'A realistic formal resume headshot of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant refined blouse or polished studio-ready professional top in neutral tones. Pure white seamless studio background, soft even studio lighting, natural skin texture, matte tidy hair, subtle polished makeup, clean symmetrical composition, head and upper chest crop, photorealistic professional resume photo.',
+    prompt: 'Create a realistic formal resume headshot of the same woman from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. She is wearing an elegant professional blouse or refined business jacket in clean neutral colors. Clean chest-up portrait, facing camera, centered composition, symmetrical studio setup, pure light neutral background, soft even business portrait lighting, subtle polished makeup, realistic skin texture, neat professional appearance, polished corporate look, resume-ready professional headshot, LinkedIn and CV photo, photorealistic.',
   },
   corporate: {
     label: 'Corporate',
-    prompt: 'A realistic executive corporate portrait of the same woman from the reference face photo. Keep the same identity, same face structure, same age impression, and same skin tone. She is wearing an elegant business outfit or refined blouse in polished professional tones. Upscale corporate lobby or executive office background with soft cinematic blur, polished but natural lighting, realistic skin texture, matte natural hair, subtle refined makeup, confident relaxed expression, premium executive headshot, half body crop, photorealistic.',
+    prompt: 'Create a realistic executive corporate headshot of the same woman from the reference face photo. Preserve the exact identity, facial structure, age impression, skin tone, and hairstyle. She is wearing a premium executive business outfit or structured blazer in refined professional tones, styled for a senior business leader portrait. Chest-up or upper-torso composition, facing camera, refined symmetrical framing, upscale corporate office background with subtle blur, clean premium lighting, natural skin texture, subtle refined makeup, calm confident executive expression, company website leadership portrait, premium business headshot, photorealistic.',
   },
 }
 
@@ -107,7 +107,7 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
     face_image_url: faceImageUrl,
     prompt,
     style: 'Headshot',
-    negative_prompt: 'lowres, blurry, bad anatomy, deformed face, different person, different identity, cartoon, illustration, painting, extra fingers, duplicate face, ugly, distorted features, oversmoothed skin, oily hair, wet hair, harsh sharpening, casual clothing, selfie, phone photo, low quality',
+    negative_prompt: 'casual clothes, t-shirt, hoodie, streetwear, selfie, outdoor scene, fashion editorial, glamour portrait, dramatic cinematic lighting, artistic portrait, fantasy, painting, illustration, cartoon, lowres, blurry, bad anatomy, deformed face, different person, different identity, duplicate face, ugly, distorted features, oversmoothed skin, oily hair, wet hair, harsh sharpening, party makeup, nightclub look, heavy beauty retouching, phone photo, low quality',
     num_inference_steps: numInferenceSteps,
     guidance_scale: guidanceScale,
     controlnet_selection: 'pose',
