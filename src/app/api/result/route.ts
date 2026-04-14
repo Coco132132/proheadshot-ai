@@ -3,12 +3,16 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
-const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
+const FAL_KEY = process.env.FAL_KEY
 const DEFAULT_FAL_POLL_BASE = 'fal-ai/instantid'
+const SEEDS = [42, 1337, 7777]
+const STYLE_ORDER = ['professional', 'clean', 'corporate'] as const
 
 interface FalRequest {
   style: 'professional' | 'clean' | 'corporate'
   seed: number
+  photoIndex?: number
+  sourceImageUrl?: string
   requestId: string
   done: boolean
   imageUrl?: string
@@ -20,6 +24,7 @@ interface FalRequest {
 interface JobData {
   status: 'pending' | 'complete' | 'error'
   faceImageUrl?: string
+  faceImageUrls?: string[]
   pollBase?: string
   requests?: FalRequest[]
   images?: {
@@ -40,11 +45,17 @@ interface JobData {
   error?: string
 }
 
-// ── Check one fal.ai queue request ──
-// Kontext submits to fal-ai/flux-pro/kontext but polls via fal-ai/flux-pro
+function ensureFalKey() {
+  if (!FAL_KEY) {
+    throw new Error('FAL_KEY is not configured')
+  }
+  return FAL_KEY
+}
+
 async function checkRequest(requestId: string, pollBase: string): Promise<{ done: boolean; imageUrl?: string; status?: string; error?: string; raw?: unknown }> {
+  const falKey = ensureFalKey()
   const statusRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}/status`, {
-    headers: { 'Authorization': `Key ${FAL_KEY}` },
+    headers: { 'Authorization': `Key ${falKey}` },
   })
 
   if (!statusRes.ok) {
@@ -52,7 +63,7 @@ async function checkRequest(requestId: string, pollBase: string): Promise<{ done
     return { done: false, status: 'STATUS_HTTP_ERROR', error: `status ${statusRes.status}: ${errText.slice(0, 300)}` }
   }
 
-  const statusData = await statusRes.json() as { status?: string; logs?: unknown; [key: string]: unknown }
+  const statusData = await statusRes.json() as { status?: string; [key: string]: unknown }
   const currentStatus = statusData.status || 'UNKNOWN'
 
   if (currentStatus === 'FAILED' || currentStatus === 'ERROR') {
@@ -64,7 +75,7 @@ async function checkRequest(requestId: string, pollBase: string): Promise<{ done
   }
 
   const outputRes = await fetch(`https://queue.fal.run/${pollBase}/requests/${requestId}`, {
-    headers: { 'Authorization': `Key ${FAL_KEY}` },
+    headers: { 'Authorization': `Key ${falKey}` },
   })
 
   if (!outputRes.ok) {
@@ -93,6 +104,8 @@ async function checkRequest(requestId: string, pollBase: string): Promise<{ done
 
 export async function GET(request: NextRequest) {
   try {
+    ensureFalKey()
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kv = (getRequestContext().env as any).JOBS
     if (!kv) return NextResponse.json({ error: 'Storage not available' }, { status: 500 })
@@ -106,20 +119,15 @@ export async function GET(request: NextRequest) {
 
     const job = JSON.parse(raw) as JobData
 
-    // Already complete or errored → return as-is
     if (job.status === 'complete' || job.status === 'error') {
       return NextResponse.json(job)
     }
 
-    // Still pending → poll fal.ai for updates
     if (job.status === 'pending' && job.requests) {
       const pendingRequests = job.requests.filter(r => !r.done)
       const pollBase = job.pollBase || DEFAULT_FAL_POLL_BASE
 
-      if (pendingRequests.length === 0) {
-        // All done — shouldn't hit here but handle gracefully
-      } else {
-        // Check all pending in parallel
+      if (pendingRequests.length > 0) {
         const checks = await Promise.all(
           pendingRequests.map(async (r) => {
             const result = await checkRequest(r.requestId, pollBase)
@@ -158,7 +166,6 @@ export async function GET(request: NextRequest) {
 
       const allDone = job.requests.every(r => r.done)
       const doneCount = job.requests.filter(r => r.done).length
-      const failedCount = job.requests.filter(r => r.done && !r.imageUrl).length
 
       if (doneCount === 0 && Date.now() - job.createdAt > 2 * 60 * 1000) {
         job.status = 'error'
@@ -169,34 +176,43 @@ export async function GET(request: NextRequest) {
       }
 
       if (allDone) {
-        // Organize into style groups (3 per style, ordered by seed)
         const images: JobData['images'] = {
           professional: [],
           clean: [],
           corporate: [],
         }
 
-        const SEEDS = [42, 1337, 7777]
+        const fallbacks = {
+          professional: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=600&fit=crop&crop=faces',
+          clean: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop&crop=faces',
+          corporate: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=600&fit=crop&crop=faces',
+        }
 
-        for (const style of ['professional', 'clean', 'corporate'] as const) {
-          for (const seed of SEEDS) {
-            const req = job.requests.find(r => r.style === style && r.seed === seed)
-            // Fallback to placeholder if generation failed
-            const fallbacks = {
-              professional: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=600&fit=crop&crop=faces',
-              clean: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=600&fit=crop&crop=faces',
-              corporate: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&h=600&fit=crop&crop=faces',
-            }
-            images[style].push(req?.imageUrl || fallbacks[style])
-          }
+        for (const style of STYLE_ORDER) {
+          const ranked = job.requests
+            .filter(r => r.style === style)
+            .sort((a, b) => {
+              const aHasImage = a.imageUrl ? 1 : 0
+              const bHasImage = b.imageUrl ? 1 : 0
+              if (aHasImage !== bHasImage) return bHasImage - aHasImage
+
+              const aPhoto = a.photoIndex ?? 999
+              const bPhoto = b.photoIndex ?? 999
+              if (aPhoto !== bPhoto) return aPhoto - bPhoto
+
+              return SEEDS.indexOf(a.seed) - SEEDS.indexOf(b.seed)
+            })
+
+          const picked = ranked.filter(r => r.imageUrl).slice(0, 3).map(r => r.imageUrl as string)
+          while (picked.length < 3) picked.push(fallbacks[style])
+          images[style] = picked
         }
 
         job.status = 'complete'
         job.images = images
+        job.updatedAt = Date.now()
         await kv.put(jobId, JSON.stringify(job), { expirationTtl: 86400 * 7 })
       } else {
-        // Save updated progress
-        const doneCount = job.requests.filter(r => r.done).length
         await kv.put(jobId, JSON.stringify(job), { expirationTtl: 86400 })
 
         return NextResponse.json({
@@ -211,6 +227,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(job)
   } catch (err) {
     console.error('Result error:', err)
-    return NextResponse.json({ error: 'Failed to load results.' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : 'Failed to load results.'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

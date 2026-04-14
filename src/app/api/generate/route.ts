@@ -3,12 +3,11 @@ import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
-const FAL_KEY = process.env.FAL_KEY || '266f703a-7703-4f5a-a858-e9332747db5d:95ef83a0e521739bff4dbe73f2f65522'
+const FAL_KEY = process.env.FAL_KEY
 const FAL_MODEL = 'fal-ai/instantid'
 const FAL_SUBMIT_URL = `https://queue.fal.run/${FAL_MODEL}`
 
 // ── Style prompts (Kontext instruction-style: edit the photo, preserve the face) ──
-// Male prompts
 const STYLES_MALE = {
   professional: {
     label: 'Professional',
@@ -24,7 +23,6 @@ const STYLES_MALE = {
   },
 }
 
-// Female prompts
 const STYLES_FEMALE = {
   professional: {
     label: 'Professional',
@@ -40,14 +38,14 @@ const STYLES_FEMALE = {
   },
 }
 
-// Default unified prompts (gender-neutral fallback)
 const STYLES = STYLES_MALE
-
 const SEEDS = [42, 1337, 7777]
+const MAX_INPUT_PHOTOS = 5
 
 interface DebugSubmitLog {
   style: keyof typeof STYLES
   seed: number
+  photoIndex: number
   endpoint: string
   apiType: 'identity-to-image'
   model: string
@@ -61,13 +59,19 @@ interface DebugSubmitLog {
   error?: string
 }
 
-// ── Upload photo to fal.ai storage → returns hosted URL ──
+function ensureFalKey() {
+  if (!FAL_KEY) {
+    throw new Error('FAL_KEY is not configured')
+  }
+  return FAL_KEY
+}
+
 async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileName: string): Promise<string> {
-  // Step 1: get upload URL
+  const falKey = ensureFalKey()
   const initRes = await fetch('https://rest.alpha.fal.ai/storage/upload/initiate', {
     method: 'POST',
     headers: {
-      'Authorization': `Key ${FAL_KEY}`,
+      'Authorization': `Key ${falKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ file_name: fileName, content_type: contentType }),
@@ -80,7 +84,6 @@ async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileNam
 
   const { upload_url, file_url } = await initRes.json() as { upload_url: string; file_url: string }
 
-  // Step 2: upload actual file
   const uploadRes = await fetch(upload_url, {
     method: 'PUT',
     headers: { 'Content-Type': contentType },
@@ -92,8 +95,8 @@ async function uploadToFal(fileBuffer: ArrayBuffer, contentType: string, fileNam
   return file_url
 }
 
-// ── Submit one async job to fal.ai queue ──
-async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<{ requestId: string; debug: DebugSubmitLog }> {
+async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed: number, photoIndex: number, gender: 'male' | 'female' | 'auto' = 'auto'): Promise<{ requestId: string; debug: DebugSubmitLog }> {
+  const falKey = ensureFalKey()
   const styleMap = gender === 'female' ? STYLES_FEMALE : STYLES_MALE
   const prompt = styleMap[style].prompt
   const guidanceScale = 1.8
@@ -119,6 +122,7 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
   const debugBase: DebugSubmitLog = {
     style,
     seed,
+    photoIndex,
     endpoint: FAL_SUBMIT_URL,
     apiType: 'identity-to-image',
     model: FAL_MODEL,
@@ -135,7 +139,7 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
   const res = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
     headers: {
-      'Authorization': `Key ${FAL_KEY}`,
+      'Authorization': `Key ${falKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -155,6 +159,8 @@ async function submitJob(faceImageUrl: string, style: keyof typeof STYLES, seed:
 
 export async function POST(request: NextRequest) {
   try {
+    ensureFalKey()
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const kv = (getRequestContext().env as any).JOBS
     if (!kv) return NextResponse.json({ error: 'Storage not available' }, { status: 500 })
@@ -162,7 +168,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const photos = formData.getAll('photos') as File[]
     const photo = formData.get('photo') as File | null
-    const allPhotos = photos.length > 0 ? photos : (photo ? [photo] : [])
+    const allPhotos = (photos.length > 0 ? photos : (photo ? [photo] : [])).slice(0, MAX_INPUT_PHOTOS)
     const genderParam = (formData.get('gender') as string | null) ?? 'auto'
     const gender = (genderParam === 'female' || genderParam === 'male') ? genderParam : 'auto'
 
@@ -170,43 +176,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No photo uploaded' }, { status: 400 })
     }
 
-    const primaryPhoto = allPhotos[0]
-
-    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(primaryPhoto.type)) {
-      return NextResponse.json({ error: 'Invalid file type. Use JPG or PNG.' }, { status: 400 })
-    }
-    if (primaryPhoto.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large. Max 10MB.' }, { status: 400 })
+    for (const file of allPhotos) {
+      if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+        return NextResponse.json({ error: 'Invalid file type. Use JPG or PNG.' }, { status: 400 })
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json({ error: 'Each photo must be under 10MB.' }, { status: 400 })
+      }
     }
 
     const jobId = crypto.randomUUID()
 
-    // Upload primary photo to fal.ai storage
-    const buf = await primaryPhoto.arrayBuffer()
-    const ext = primaryPhoto.type.includes('png') ? 'png' : 'jpg'
-    const faceImageUrl = await uploadToFal(buf, primaryPhoto.type, `face-${jobId}.${ext}`)
+    const uploadedPhotos = await Promise.all(
+      allPhotos.map(async (inputPhoto, photoIndex) => {
+        const buf = await inputPhoto.arrayBuffer()
+        const ext = inputPhoto.type.includes('png') ? 'png' : 'jpg'
+        const faceImageUrl = await uploadToFal(buf, inputPhoto.type, `face-${jobId}-${photoIndex}.${ext}`)
+        return { photoIndex, faceImageUrl, fileName: inputPhoto.name || `photo-${photoIndex + 1}` }
+      })
+    )
 
-    console.log('[generate] uploaded source image', JSON.stringify({ jobId, faceImageUrl, fileCount: allPhotos.length, gender, model: FAL_MODEL, apiType: 'identity-to-image', strategy: 'identity-priority' }))
+    console.log('[generate] uploaded source images', JSON.stringify({
+      jobId,
+      uploadedCount: uploadedPhotos.length,
+      fileCount: allPhotos.length,
+      gender,
+      model: FAL_MODEL,
+      apiType: 'identity-to-image',
+      strategy: 'multi-photo-best-of',
+      uploadedFaceImageUrls: uploadedPhotos.map(({ photoIndex, faceImageUrl, fileName }) => ({ photoIndex, faceImageUrl, fileName })),
+    }))
 
-    // Submit 9 jobs in parallel (3 styles × 3 seeds)
     const styleKeys = Object.keys(STYLES) as (keyof typeof STYLES)[]
-    const jobEntries = styleKeys.flatMap(style =>
-      SEEDS.map(seed => ({ style, seed }))
+    const jobEntries = uploadedPhotos.flatMap(({ photoIndex, faceImageUrl }) =>
+      styleKeys.flatMap(style =>
+        SEEDS.map(seed => ({ style, seed, photoIndex, faceImageUrl }))
+      )
     )
 
     const submitted = await Promise.all(
-      jobEntries.map(({ style, seed }) => submitJob(faceImageUrl, style, seed, gender))
+      jobEntries.map(({ faceImageUrl, style, seed, photoIndex }) => submitJob(faceImageUrl, style, seed, photoIndex, gender))
     )
 
-    // Build requests map
     const requests = jobEntries.map((entry, i) => ({
       style: entry.style,
       seed: entry.seed,
+      photoIndex: entry.photoIndex,
+      sourceImageUrl: entry.faceImageUrl,
       requestId: submitted[i].requestId,
       done: false,
     }))
 
-    // Store pending job in KV
     const now = Date.now()
     const jobData = {
       jobId,
@@ -216,7 +236,8 @@ export async function POST(request: NextRequest) {
       pollBase: FAL_MODEL,
       apiType: 'identity-to-image',
       inputKind: 'face_image_url',
-      faceImageUrl,
+      faceImageUrl: uploadedPhotos[0]?.faceImageUrl,
+      faceImageUrls: uploadedPhotos.map(({ faceImageUrl }) => faceImageUrl),
       requests,
       images: null,
       selection: { professional: 0, clean: 0, corporate: 0 },
@@ -232,10 +253,12 @@ export async function POST(request: NextRequest) {
         pollBase: FAL_MODEL,
         apiType: 'identity-to-image',
         inputKind: 'face_image_url',
-        uploadedFaceImageUrl: faceImageUrl,
+        uploadedFaceImageUrl: uploadedPhotos[0]?.faceImageUrl,
+        uploadedFaceImageUrls: uploadedPhotos,
         fileCount: allPhotos.length,
+        uploadedCount: uploadedPhotos.length,
         gender,
-        prompts: Object.fromEntries(submitted.map(({ debug }) => [`${debug.style}-${debug.seed}`, debug.prompt])),
+        prompts: Object.fromEntries(submitted.map(({ debug }) => [`photo${debug.photoIndex}-${debug.style}-${debug.seed}`, debug.prompt])),
         submitLogs: submitted.map(({ debug }) => debug),
         pollLogs: [],
         returnedImageUrls: [],

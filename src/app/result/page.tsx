@@ -95,8 +95,8 @@ function ResultContent() {
 
         attempts++
         setPollCount(data.doneCount ?? attempts)
-        if (attempts >= 60) { setError('Generation timed out. Please try again.'); setLoading(false); return }
-        setTimeout(poll, 3000)
+        if (attempts >= 120) { setError('Generation timed out. Please try again.'); setLoading(false); return }
+        setTimeout(poll, 4000)
       } catch {
         setError('Failed to load your headshots. Please try again.')
         setLoading(false)
