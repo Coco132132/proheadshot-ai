@@ -167,9 +167,11 @@ export async function GET(request: NextRequest) {
       const allDone = job.requests.every(r => r.done)
       const doneCount = job.requests.filter(r => r.done).length
 
-      if (doneCount === 0 && Date.now() - job.createdAt > 2 * 60 * 1000) {
+      const hasStarted = job.requests.some(r => r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || Boolean(r.imageUrl))
+
+      if (doneCount === 0 && !hasStarted && Date.now() - job.createdAt > 8 * 60 * 1000) {
         job.status = 'error'
-        job.error = 'Generation did not start successfully. Please try again.'
+        job.error = 'Generation queue is taking too long to start. Please try again.'
         job.updatedAt = Date.now()
         await kv.put(jobId, JSON.stringify(job), { expirationTtl: 86400 })
         return NextResponse.json(job)
